@@ -78,8 +78,8 @@ function initializeApp() {
 }
 
 function checkAuthenticationAndInitialize() {
-    // Restore sidebar state from localStorage
-    const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    // Set sidebar collapsed by default
+    const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') !== 'false';
     if (sidebarCollapsed) {
         document.body.classList.add('sidebar-collapsed');
         const toggleBtn = document.getElementById('sidebar-toggle');
@@ -974,12 +974,8 @@ function toggleSidebar() {
     
     body.classList.toggle('sidebar-collapsed');
     
-    // Change icon based on state
-    if (body.classList.contains('sidebar-collapsed')) {
-        icon.className = 'fas fa-bars text-gray-600';
-    } else {
-        icon.className = 'fas fa-times text-gray-600';
-    }
+    // Always use bars icon
+    icon.className = 'fas fa-bars text-gray-600';
     
     // Save state to localStorage
     localStorage.setItem('sidebarCollapsed', body.classList.contains('sidebar-collapsed'));
@@ -1990,9 +1986,7 @@ function renderActivity(activities) {
     container.innerHTML = displayActivities.map(activity => `
         <div class="activity-item">
             <div class="flex items-start space-x-3">
-                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    Lịch sử
-                </div>
+
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-gray-900">${activity[COL.A_ACTION] || 'Hành động'}</p>
                     <p class="text-xs text-gray-600 mt-1">${activity[COL.A_DETAILS] || ''}</p>
