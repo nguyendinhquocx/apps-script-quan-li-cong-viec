@@ -1037,7 +1037,7 @@ body {
   padding: 12px 16px;
   border: none;
   border-radius: 12px;
-  background: var(--bg-white);
+  background: #f3f4f6;
   color: var(--text-black);
   transition: var(--transition-smooth);
   font-size: 14px;
@@ -1045,11 +1045,13 @@ body {
 
 .form-input:focus {
   outline: none;
-  background: var(--bg-gray);
+  background: #f9fafb;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
 }
 
 .form-input:hover {
-  background: var(--bg-gray);
+  background: #f9fafb;
 }
 
 .form-textarea {
@@ -1057,7 +1059,7 @@ body {
   padding: 12px 16px;
   border: none;
   border-radius: 12px;
-  background: var(--bg-white);
+  background: #f3f4f6;
   color: var(--text-black);
   transition: var(--transition-smooth);
   font-size: 14px;
@@ -1067,11 +1069,13 @@ body {
 
 .form-textarea:focus {
   outline: none;
-  background: var(--bg-gray);
+  background: #f9fafb;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
 }
 
 .form-textarea:hover {
-  background: var(--bg-gray);
+  background: #f9fafb;
 }
 
 .form-select {
@@ -1079,7 +1083,7 @@ body {
   padding: 12px 16px;
   border: none;
   border-radius: 12px;
-  background: var(--bg-white);
+  background: #f3f4f6;
   color: var(--text-black);
   transition: var(--transition-smooth);
   font-size: 14px;
@@ -1088,11 +1092,65 @@ body {
 
 .form-select:focus {
   outline: none;
-  background: var(--bg-gray);
+  background: #f9fafb;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
 }
 
 .form-select:hover {
-  background: var(--bg-gray);
+  background: #f9fafb;
+}
+
+.permission-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-black);
+  transition: var(--transition-smooth);
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.permission-select:focus {
+  outline: none;
+  background: transparent;
+}
+
+.permission-select:hover {
+  background: transparent;
+}
+
+/* Style for permission label */
+.form-group:has(.permission-select) .form-label {
+  background: transparent;
+  border: none;
+  font-weight: bold;
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.gantt-nav-btn {
+  background: transparent;
+  border: none;
+  color: #000;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.gantt-nav-btn:hover {
+  background: transparent;
+  color: #374151;
+  transform: scale(1.1);
+}
+
+.gantt-nav-btn:focus {
+  outline: none;
+  background: transparent;
 }
 
 /* Toast Notifications */
@@ -2412,12 +2470,12 @@ main {
   
   /* Special day colors */
   .gantt-day.weekend { 
-    background-color: rgba(229, 231, 235, 0.4); 
+    background-color: #f3f4f6; 
   }
   
   .gantt-day.today { 
-    background-color: #ef4444; 
-    color: white; 
+    background-color: #e5e7eb; 
+    color: var(--text-black); 
     font-weight: 700; 
   }
   

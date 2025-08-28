@@ -78,15 +78,12 @@ function initializeApp() {
 }
 
 function checkAuthenticationAndInitialize() {
-    // Set sidebar collapsed by default
-    const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') !== 'false';
-    if (sidebarCollapsed) {
-        document.body.classList.add('sidebar-collapsed');
-        const toggleBtn = document.getElementById('sidebar-toggle');
-        if (toggleBtn) {
-            const icon = toggleBtn.querySelector('i');
-            if (icon) icon.className = 'fas fa-bars text-gray-600';
-        }
+    // Hide sidebar by default until user logs in
+    document.body.classList.add('sidebar-collapsed');
+    const toggleBtn = document.getElementById('sidebar-toggle');
+    if (toggleBtn) {
+        const icon = toggleBtn.querySelector('i');
+        if (icon) icon.className = 'fas fa-bars text-gray-600';
     }
     
     showLoading('Đang kiểm tra đăng nhập...');
@@ -226,6 +223,17 @@ function handleSuccessfulLogin(dataResponse) {
 function updateUIForUser(user) {
   const isAdminUser = isAdmin();
   const isManagerUser = user.role && user.role.toLowerCase().includes('quản lý');
+  
+  // Show sidebar when user logs in successfully
+  const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+  if (!sidebarCollapsed) {
+    document.body.classList.remove('sidebar-collapsed');
+    const toggleBtn = document.getElementById('sidebar-toggle');
+    if (toggleBtn) {
+      const icon = toggleBtn.querySelector('i');
+      if (icon) icon.className = 'fas fa-times text-gray-600';
+    }
+  }
   
   // Update user info in sidebar
   document.getElementById('user-info').classList.remove('hidden');
@@ -2459,7 +2467,7 @@ function createStaffModal(isEdit, data) {
                   
                   <div class="form-group">
                       <label class="form-label">Phân quyền</label>
-                      <select name="role" class="form-select">
+                      <select name="role" class="permission-select">
                           <option value="Nhân viên" ${isEdit && data[COL.S_ROLE] === 'Nhân viên' ? 'selected' : 'selected'}>Nhân viên</option>
                           <option value="Quản lý" ${isEdit && data[COL.S_ROLE] === 'Quản lý' ? 'selected' : ''}>Quản lý</option>
                           <option value="Admin" ${isEdit && data[COL.S_ROLE] === 'Admin' ? 'selected' : ''}>Admin</option>
