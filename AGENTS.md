@@ -7,7 +7,7 @@
 
 ---
 
-## Ngữ cảnh dự án
+## Ngữ cảnh (LUÔN LUÔN PHẢI ĐỌC CÁC FILE ĐƯỢC LIÊN KẾT)
 
 `MCP.md`
 `README.md`: trong mỗi thư mục để khám phá mỗi tệp dùng để làm gì và loại thông tin nào trong đó.

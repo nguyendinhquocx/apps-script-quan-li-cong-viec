@@ -45,7 +45,9 @@
       "Bash(npm i:*)",
       "Bash(where:*)",
       "WebFetch(domain:ksk.hmsg.fun)",
-      "WebFetch(domain:localhost)"
+      "WebFetch(domain:localhost)",
+      "Read(d:\\pcloud\\code\\apps scripts\\quan li cong viec/**)",
+      "Read(d:\\pcloud\\code\\apps scripts\\quan li cong viec/**)"
     ],
     "deny": [],
     "ask": [],

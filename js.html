@@ -78,6 +78,17 @@ function initializeApp() {
 }
 
 function checkAuthenticationAndInitialize() {
+    // Restore sidebar state from localStorage
+    const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (sidebarCollapsed) {
+        document.body.classList.add('sidebar-collapsed');
+        const toggleBtn = document.getElementById('sidebar-toggle');
+        if (toggleBtn) {
+            const icon = toggleBtn.querySelector('i');
+            if (icon) icon.className = 'fas fa-bars text-gray-600';
+        }
+    }
+    
     showLoading('Đang kiểm tra đăng nhập...');
     
     google.script.run
@@ -220,13 +231,10 @@ function updateUIForUser(user) {
   document.getElementById('user-info').classList.remove('hidden');
   document.getElementById('login-prompt').classList.add('hidden');
   
-  const userAvatar = document.getElementById('user-avatar');
   const userName = document.getElementById('user-name');
   const userRole = document.getElementById('user-role');
   
-  if (userAvatar && userName && userRole) {
-    const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    userAvatar.textContent = initials;
+  if (userName && userRole) {
     userName.textContent = user.name;
     userRole.textContent = user.role;
   }
@@ -535,6 +543,9 @@ function setupEventListeners() {
     // Mobile menu
     document.getElementById('mobile-menu-btn').addEventListener('click', toggleMobileMenu);
     document.getElementById('mobile-overlay').addEventListener('click', closeMobileMenu);
+    
+    // Sidebar toggle
+    document.getElementById('sidebar-toggle')?.addEventListener('click', toggleSidebar);
 
     // Authentication buttons
     document.getElementById('login-btn')?.addEventListener('click', showLoginModal);
@@ -680,7 +691,7 @@ function showProjectDetailsModal(projectId, projectName) {
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="text-xl font-bold text-gray-900">Chi tiết dự án: ${projectName}</h3>
                     <button type="button" class="close-modal text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times"></i>
+                        Đóng
                     </button>
                 </div>
                 
@@ -710,7 +721,7 @@ function showProjectDetailsModal(projectId, projectName) {
                             <span class="text-sm font-semibold">${projectProgress}%</span>
                         </div>
                         <div class="h-2 bg-gray-200 rounded-full">
-                            <div class="h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full" style="width: ${projectProgress}%"></div>
+                            <div class="h-full bg-gray-300 rounded-full" style="width: ${projectProgress}%"></div>
                         </div>
                     </div>
                 </div>
@@ -723,7 +734,7 @@ function showProjectDetailsModal(projectId, projectName) {
                             ${projectTasks.map(task => createTaskListItem(task)).join('')}
                         </div>` : 
                         `<div class="text-center py-8 text-gray-500">
-                            <i class="fas fa-tasks text-4xl mb-2 opacity-30"></i>
+                            <div class="text-4xl mb-2 opacity-30 font-bold">Nhiệm vụ</div>
                             <p>Chưa có nhiệm vụ nào trong dự án này</p>
                         </div>`
                     }
@@ -787,11 +798,11 @@ function createTaskListItem(task) {
                 
                 <div class="ml-4 flex flex-col items-end">
                     <div class="flex items-center text-sm text-gray-600 mb-1">
-                        <i class="fas fa-user mr-1"></i>
+                        
                         <span>${taskAssignee}</span>
                     </div>
                     <div class="flex items-center text-sm text-gray-600">
-                        <i class="fas fa-calendar-alt mr-1"></i>
+                        
                         <span>${taskDueDate}</span>
                     </div>
                 </div>
@@ -956,6 +967,24 @@ function closeMobileMenu() {
     setTimeout(() => overlay.classList.add('hidden'), 300);
 }
 
+function toggleSidebar() {
+    const body = document.body;
+    const toggleBtn = document.getElementById('sidebar-toggle');
+    const icon = toggleBtn.querySelector('i');
+    
+    body.classList.toggle('sidebar-collapsed');
+    
+    // Change icon based on state
+    if (body.classList.contains('sidebar-collapsed')) {
+        icon.className = 'fas fa-bars text-gray-600';
+    } else {
+        icon.className = 'fas fa-times text-gray-600';
+    }
+    
+    // Save state to localStorage
+    localStorage.setItem('sidebarCollapsed', body.classList.contains('sidebar-collapsed'));
+}
+
 // === Data Rendering ===
 function renderStats(stats) {
     if (!stats) return;
@@ -1075,7 +1104,7 @@ function createCompactProjectItem(project) {
         <div class="project-tree-item" data-id="${projectId}">
             <div class="project-header">
                 <button class="project-expand-btn" data-project="${projectId}">
-                    <i class="fas fa-chevron-right"></i>
+                    
                 </button>
                 <div class="project-info">
                     <div class="flex items-start justify-between">
@@ -1085,22 +1114,22 @@ function createCompactProjectItem(project) {
                             <div class="project-meta">
                               <span class="status-badge ${statusClass}">${projectStatus}</span>
                               <span class="flex items-center text-xs">
-                                  <i class="fas fa-user-tie mr-1"></i>${projectManager}
+                                  ${projectManager}
                               </span>
                               <span class="flex items-center text-xs ml-2">
-                                  <i class="fas fa-calendar-alt mr-1 text-green-500"></i>${formatDateForDisplay(project[COL.P_START])}
+                                  Bắt đầu: ${formatDateForDisplay(project[COL.P_START])}
                               </span>
                               <span class="flex items-center text-xs ml-2">
-                                  <i class="fas fa-calendar-check mr-1 text-red-500"></i>${formatDateForDisplay(project[COL.P_END])}
+                                  Kết thúc: ${formatDateForDisplay(project[COL.P_END])}
                               </span>
                           </div>
                         </div>
                         <div class="flex items-center space-x-2 ml-4">
                             <button class="action-btn action-btn-edit edit-btn" data-type="project" data-id="${projectId}" title="Chỉnh sửa">
-                                <i class="fas fa-edit"></i>
+                                Sửa
                             </button>
                             <button class="action-btn action-btn-delete delete-btn" data-type="project" data-id="${projectId}" data-name="${projectName}" title="Xóa">
-                                <i class="fas fa-trash"></i>
+                                Xóa
                             </button>
                         </div>
                     </div>
@@ -1150,10 +1179,10 @@ function createCompactTaskItem(task) {
                         <span class="status-badge ${priorityClass}">${taskPriority}</span>
                     </div>
                     <div class="task-assignee">
-                        <i class="fas fa-user"></i>
+                        
                         <span>${taskAssignee}</span>
                         <span class="mx-2">•</span>
-                        <i class="fas fa-calendar"></i>
+                        
                         <span>${taskDueDate}</span>
                     </div>
                     
@@ -1173,11 +1202,11 @@ function createCompactTaskItem(task) {
                     </div>
                     <div class="flex space-x-1">
                         <button class="action-btn action-btn-edit edit-btn" data-type="task" data-id="${taskId}" title="Chỉnh sửa">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="action-btn action-btn-delete delete-btn" data-type="task" data-id="${taskId}" data-name="${taskName}" title="Xóa">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                                 Sửa
+                             </button>
+                             <button class="action-btn action-btn-delete delete-btn" data-type="task" data-id="${taskId}" data-name="${taskName}" title="Xóa">
+                                 Xóa
+                             </button>
                     </div>
                 </div>
             </div>
@@ -1292,15 +1321,15 @@ function createPriorityTaskCard(task) {
                 </div>
                 ${taskDesc ? `<p class="text-xs text-gray-600 mb-2 leading-relaxed">${taskDesc}</p>` : ''}
                 <div class="text-xs text-gray-600 space-y-1">
-                    <div><i class="fas fa-folder mr-1"></i>Dự án: ${projectDisplay}</div>
-                    <div><i class="fas fa-user mr-1"></i>${taskAssignee}</div>
-                    <div><i class="fas fa-calendar mr-1"></i>${taskDueDate}</div>
+                    <div>Dự án: ${projectDisplay}</div>
+                    <div>Người thực hiện: ${taskAssignee}</div>
+                    <div>Hạn: ${taskDueDate}</div>
                 </div>
             </div>
             <div class="flex items-center space-x-2">
                 <span class="text-xs font-medium text-gray-700 min-w-[30px]">${taskCompletion}%</span>
                 <div class="flex-1 h-1.5 bg-gray-200 rounded-full">
-                    <div class="h-full bg-gradient-to-r from-red-400 to-orange-500 rounded-full" style="width: ${taskCompletion}%"></div>
+                    <div class="h-full bg-gray-300 rounded-full" style="width: ${taskCompletion}%"></div>
                 </div>
             </div>
         </div>
@@ -1344,28 +1373,28 @@ function createProjectCard(project, isDetailed = false) {
                 <div class="flex space-x-2 ml-4">
                     <!-- Thêm nút con mắt ở đây -->
                     <button class="action-btn action-btn-view view-project-btn" data-type="project" data-id="${projectId}" data-name="${projectName}" title="Xem chi tiết">
-                        <i class="fas fa-eye"></i>
+                        Xem
                     </button>
                     <button class="action-btn action-btn-edit edit-btn" data-type="project" data-id="${projectId}" title="Chỉnh sửa">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="action-btn action-btn-delete delete-btn" data-type="project" data-id="${projectId}" data-name="${projectName}" title="Xóa">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                             Sửa
+                         </button>
+                         <button class="action-btn action-btn-delete delete-btn" data-type="project" data-id="${projectId}" data-name="${projectName}" title="Xóa">
+                             Xóa
+                         </button>
                 </div>
             </div>
             
             ${isDetailed ? `
                 <div class="space-y-2 text-sm text-gray-600">
                     <div class="flex items-center">
-                        <i class="fas fa-user-tie w-4 mr-2 text-purple-500"></i>
+                        
                         <span>Quản lý: ${projectManager}</span>
                     </div>
                       <div class="flex items-center">
-                          <i class="fas fa-calendar-alt w-4 mr-2 text-green-500"></i>
+                          Bắt đầu: 
                           <span>Bắt đầu: ${startDate}</span>
                           
-                          <i class="fas fa-calendar-check w-4 mr-2 text-red-500 ml-4"></i>
+                          Kết thúc: 
                           <span>Kết thúc: ${endDate}</span>
                       </div>
                 </div>
@@ -1452,11 +1481,11 @@ function createTaskCard(task, isDetailed = false) {
                 </div>
                 <div class="flex space-x-2 ml-4">
                     <button class="action-btn action-btn-edit edit-btn" data-type="task" data-id="${taskId}" title="Chỉnh sửa">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="action-btn action-btn-delete delete-btn" data-type="task" data-id="${taskId}" data-name="${taskName}" title="Xóa">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                         Sửa
+                     </button>
+                     <button class="action-btn action-btn-delete delete-btn" data-type="task" data-id="${taskId}" data-name="${taskName}" title="Xóa">
+                         Xóa
+                     </button>
                 </div>
             </div>
             
@@ -1473,24 +1502,24 @@ function createTaskCard(task, isDetailed = false) {
             ${isDetailed ? `
                 <div class="space-y-2 text-sm text-gray-600">
                   <div class="flex items-center">
-                      <i class="fas fa-user w-4 mr-2 text-purple-500"></i>
+                      
                       <span>Giao cho: ${taskAssignee}</span>
 
-                      <i class="fas fa-calendar-times w-4 mr-2 text-red-500 ml-4"></i>
+                      Hạn: 
                       <span>Hạn: ${taskDueDate}</span>
                   </div>
                   
                   <!-- THÊM VÀO ĐÂY: Các trường mới -->
                   ${taskReportDate ? `
                   <div class="flex items-center mt-2">
-                      <i class="fas fa-calendar-check w-4 mr-2 text-green-500"></i>
+                      Hoàn thành: 
                       <span>Ngày báo cáo: ${taskReportDate}</span>
                   </div>
                   ` : ''}
                   
                   ${taskTarget ? `
                   <div class="flex items-start mt-2">
-                      <i class="fas fa-bullseye w-4 mr-2 text-amber-500 mt-1"></i>
+                      Ưu tiên: 
                       <div>
                           <span class="font-medium">Mục tiêu:</span>
                           <p class="text-xs text-gray-600 mt-1">${taskTarget}</p>
@@ -1500,7 +1529,7 @@ function createTaskCard(task, isDetailed = false) {
                   
                   ${taskResultLinks ? `
                   <div class="flex items-start mt-2">
-                      <i class="fas fa-link w-4 mr-2 text-blue-500 mt-1"></i>
+                      Link: 
                       <div>
                           <span class="font-medium">Link kết quả:</span>
                           <div class="text-xs text-blue-600 mt-1">${formatTaskLinks(taskResultLinks)}</div>
@@ -1510,7 +1539,7 @@ function createTaskCard(task, isDetailed = false) {
                   
                   ${taskOutput ? `
                   <div class="flex items-start mt-2">
-                      <i class="fas fa-clipboard-check w-4 mr-2 text-indigo-500 mt-1"></i>
+                      Báo cáo: 
                       <div>
                           <span class="font-medium">Kết quả đầu ra:</span>
                           <p class="text-xs text-gray-600 mt-1">${taskOutput}</p>
@@ -1553,10 +1582,7 @@ function createStaffCard(staff) {
   
   return `
       <div class="staff-card" data-id="${staffId}">
-          <div class="staff-avatar">
-              ${initials}
-          </div>
-          <h4 class="font-semibold text-gray-900 mb-1">${staffName}</h4>
+          <h4 class="font-semibold text-gray-900 mb-3">${staffName}</h4>
           <p class="text-sm text-gray-600 mb-1">${staffPosition}</p>
           <p class="text-xs text-gray-500 mb-2">${staffEmail}</p>
           <div class="flex justify-center mb-4">
@@ -1564,11 +1590,11 @@ function createStaffCard(staff) {
           </div>
           <div class="flex justify-center space-x-2">
               <button class="action-btn action-btn-edit edit-btn" data-type="staff" data-id="${staffId}" title="Chỉnh sửa">
-                  <i class="fas fa-edit"></i>
-              </button>
-              <button class="action-btn action-btn-delete delete-btn" data-type="staff" data-id="${staffId}" data-name="${staffName}" title="Xóa">
-                  <i class="fas fa-trash"></i>
-              </button>
+                         Sửa
+                     </button>
+                     <button class="action-btn action-btn-delete delete-btn" data-type="staff" data-id="${staffId}" data-name="${staffName}" title="Xóa">
+                         Xóa
+                     </button>
           </div>
       </div>
   `;
@@ -1965,7 +1991,7 @@ function renderActivity(activities) {
         <div class="activity-item">
             <div class="flex items-start space-x-3">
                 <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-history text-blue-600 text-xs"></i>
+                    Lịch sử
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-gray-900">${activity[COL.A_ACTION] || 'Hành động'}</p>
@@ -2202,8 +2228,8 @@ function createProjectModal(isEdit, data) {
               <div class="flex items-center justify-between mb-6">
                   <h3 class="text-xl font-bold text-gray-900">${title}</h3>
                   <button type="button" class="close-modal text-gray-400 hover:text-gray-600">
-                      <i class="fas fa-times"></i>
-                  </button>
+                         Đóng
+                     </button>
               </div>
               
               <form id="project-form">
@@ -2293,8 +2319,8 @@ function createTaskModal(isEdit, data) {
               <div class="flex items-center justify-between mb-6">
                   <h3 class="text-xl font-bold text-gray-900">${title}</h3>
                   <button type="button" class="close-modal text-gray-400 hover:text-gray-600">
-                      <i class="fas fa-times"></i>
-                  </button>
+                         Đóng
+                     </button>
               </div>
               
               <form id="task-form">
@@ -2415,8 +2441,8 @@ function createStaffModal(isEdit, data) {
               <div class="flex items-center justify-between mb-6">
                   <h3 class="text-xl font-bold text-gray-900">${title}</h3>
                   <button type="button" class="close-modal text-gray-400 hover:text-gray-600">
-                      <i class="fas fa-times"></i>
-                  </button>
+                         Đóng
+                     </button>
               </div>
               
               <form id="staff-form">
@@ -2893,7 +2919,7 @@ function showToast(message, type = 'info') {
             <i class="fas ${icons[type] || icons.info}"></i>
             <span class="flex-1">${message}</span>
             <button onclick="this.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times"></i>
+                Đóng
             </button>
         </div>
     `;
@@ -2979,7 +3005,7 @@ function createNotificationModal(isEdit, data) {
         <div class="flex items-center justify-between mb-6">
           <h3 class="text-xl font-bold text-gray-900">Tạo thông báo mới</h3>
           <button type="button" class="close-modal text-gray-400 hover:text-gray-600">
-            <i class="fas fa-times"></i>
+            Đóng
           </button>
         </div>
         
@@ -3089,20 +3115,20 @@ function renderGanttChart() {
           <div class="gantt-item" data-id="${projectId}" data-type="project">
             <div class="gantt-item-label">
               <button class="gantt-toggle-btn mr-2" data-project="${projectId}">
-                <i class="fas fa-chevron-right"></i>
+                >
               </button>
-              <i class="fas fa-folder text-blue-500 mr-2"></i>
+              
               <span class="truncate">${project[COL.P_NAME]}</span>
               
               <div class="gantt-item-actions">
                 <button class="action-btn action-btn-view view-project-btn mr-1" data-type="project" data-id="${projectId}" data-name="${project[COL.P_NAME]}" title="Xem chi tiết">
-                  <i class="fas fa-eye"></i>
+                  Xem
                 </button>
                 <button class="action-btn action-btn-edit edit-btn mr-1" data-type="project" data-id="${projectId}" title="Chỉnh sửa">
-                  <i class="fas fa-edit"></i>
+                  Sửa
                 </button>
                 <button class="action-btn action-btn-delete delete-btn" data-type="project" data-id="${projectId}" data-name="${project[COL.P_NAME]}" title="Xóa">
-                  <i class="fas fa-trash"></i>
+                  Xóa
                 </button>
               </div>
             </div>
@@ -3144,16 +3170,16 @@ function renderGanttChart() {
                 return `
                   <div class="gantt-item gantt-task-item" data-id="${task[COL.T_ID]}" data-type="task" data-project-id="${task[COL.T_PID]}">
                     <div class="gantt-item-label">
-                      <i class="fas fa-circle ${getStatusIcon(taskStatus)} mr-2"></i>
+                      
                       <div class="flex flex-col">
-                        <span class="truncate">${task[COL.T_NAME]} ${taskPriority.toLowerCase().includes('cao') ? '<i class="fas fa-star text-yellow-400 ml-1"></i>' : ''}</span>
+                        <span class="truncate">${task[COL.T_NAME]} ${taskPriority.toLowerCase().includes('cao') ? '⭐' : ''}</span>
                         <span class="text-xs text-gray-500 truncate">${taskAssignee} - ${taskStatus} - ${taskPriority}</span>
                         
                         ${hasLinks ? `
                           <div class="flex gap-2 mt-1">
                             ${taskLinks.map((link, index) => `
                               <a href="${link}" target="_blank" class="text-xs text-blue-600 hover:underline flex items-center">
-                                <i class="fas fa-link mr-1"></i>Link ${index + 1}
+                                Link ${index + 1}
                               </a>
                             `).join('')}
                           </div>
@@ -3162,10 +3188,10 @@ function renderGanttChart() {
                       
                       <div class="gantt-item-actions">
                         <button class="action-btn action-btn-edit edit-btn mr-1" data-type="task" data-id="${task[COL.T_ID]}" title="Chỉnh sửa">
-                          <i class="fas fa-edit"></i>
+                          Sửa
                         </button>
                         <button class="action-btn action-btn-delete delete-btn" data-type="task" data-id="${task[COL.T_ID]}" data-name="${task[COL.T_NAME]}" title="Xóa">
-                          <i class="fas fa-trash"></i>
+                          Xóa
                         </button>
                       </div>
                     </div>
@@ -3198,7 +3224,7 @@ function renderGanttChart() {
   if (itemsHTML === '') {
     itemsHTML = `
       <div class="text-center py-16 text-gray-500">
-        <i class="fas fa-calendar-times text-4xl mb-3 opacity-30"></i>
+        <div class="text-4xl mb-3 opacity-30 font-bold">Lịch</div>
         <p>Không có dự án hoặc nhiệm vụ nào trong ${monthName} ${year}</p>
       </div>
     `;
