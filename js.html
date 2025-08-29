@@ -657,6 +657,17 @@ function setupEventListeners() {
             }
         }
 
+        // THÊM: Xử lý click vào task card
+        if (e.target.closest('.clickable-task-card') && !e.target.closest('.action-btn')) {
+            const card = e.target.closest('.clickable-task-card');
+            const taskId = card.dataset.id;
+            
+            if (taskId) {
+                // Mở modal chỉnh sửa task trực tiếp
+                openEditModal('task', taskId);
+            }
+        }
+
         // Project expand/collapse
         if (e.target.matches('.project-expand-btn') || e.target.closest('.project-expand-btn')) {
             const btn = e.target.matches('.project-expand-btn') ? e.target : e.target.closest('.project-expand-btn');
@@ -1350,7 +1361,7 @@ function renderProjects() {
 function createProjectCard(project, isDetailed = false) {
     const projectId = project[COL.P_ID] || 'N/A';
     const projectName = project[COL.P_NAME] || 'Chưa có tên';
-    const projectDesc = project[COL.P_DESC] || 'Không có mô tả';
+    const projectDesc = project[COL.P_DESC] || '';
     const projectManager = project[COL.P_MANAGER] || 'Chưa gán';
     const projectStatus = project[COL.P_STATUS] || 'Chưa bắt đầu';
     const startDate = formatDateForDisplay(project[COL.P_START]);
@@ -1363,7 +1374,7 @@ function createProjectCard(project, isDetailed = false) {
             <div class="flex items-start justify-between mb-4">
                 <div class="flex-1">
                     <h4 class="font-semibold text-gray-900 text-lg mb-1">${projectName}</h4>
-                    <p class="text-sm text-gray-600 mb-2">${projectDesc}</p>
+                    ${projectDesc ? `<p class="text-sm text-gray-600 mb-2">${projectDesc}</p>` : ''}
                     <span class="status-badge ${statusClass}">${projectStatus}</span>
                 </div>
                 <div class="flex space-x-2 ml-4">
@@ -1381,12 +1392,16 @@ function createProjectCard(project, isDetailed = false) {
                     <div class="flex items-center">
                         <span>Quản lý: ${projectManager}</span>
                     </div>
+                    ${startDate ? `
                     <div class="flex items-center">
                         <span>Bắt đầu: ${startDate}</span>
                     </div>
+                    ` : ''}
+                    ${endDate ? `
                     <div class="flex items-center">
                         <span>Kết thúc: ${endDate}</span>
                     </div>
+                    ` : ''}
                 </div>
             ` : ''}
         </div>
@@ -1458,7 +1473,7 @@ function createTaskCard(task, isDetailed = false) {
     const priorityClass = getPriorityClass(taskPriority);
     
     return `
-        <div class="task-card" data-id="${taskId}">
+        <div class="task-card clickable-task-card cursor-pointer" data-id="${taskId}">
             <div class="flex items-start justify-between mb-3">
                 <div class="flex-1">
                     <h4 class="font-semibold text-gray-900 mb-1">${taskName}</h4>
@@ -1470,9 +1485,6 @@ function createTaskCard(task, isDetailed = false) {
                     </div>
                 </div>
                 <div class="flex space-x-2 ml-4">
-                    <button class="action-btn action-btn-edit edit-btn" data-type="task" data-id="${taskId}" title="Chỉnh sửa">
-                         Sửa
-                     </button>
                      <button class="action-btn action-btn-delete delete-btn" data-type="task" data-id="${taskId}" data-name="${taskName}" title="Xóa">
                          Xóa
                      </button>
@@ -1491,25 +1503,19 @@ function createTaskCard(task, isDetailed = false) {
             
             ${isDetailed ? `
                 <div class="space-y-2 text-sm text-gray-600">
-                  <div class="flex items-center">
-                      
+                  <div class="flex items-center justify-between">
                       <span>Giao cho: ${taskAssignee}</span>
-
-                      Hạn: 
                       <span>Hạn: ${taskDueDate}</span>
                   </div>
                   
-                  <!-- THÊM VÀO ĐÂY: Các trường mới -->
                   ${taskReportDate ? `
-                  <div class="flex items-center mt-2">
-                      Hoàn thành: 
+                  <div class="flex items-center">
                       <span>Ngày báo cáo: ${taskReportDate}</span>
                   </div>
                   ` : ''}
                   
                   ${taskTarget ? `
-                  <div class="flex items-start mt-2">
-                      Ưu tiên: 
+                  <div class="flex items-start">
                       <div>
                           <span class="font-medium">Mục tiêu:</span>
                           <p class="text-xs text-gray-600 mt-1">${taskTarget}</p>
@@ -1518,8 +1524,7 @@ function createTaskCard(task, isDetailed = false) {
                   ` : ''}
                   
                   ${taskResultLinks ? `
-                  <div class="flex items-start mt-2">
-                      Link: 
+                  <div class="flex items-start">
                       <div>
                           <span class="font-medium">Link kết quả:</span>
                           <div class="text-xs text-blue-600 mt-1">${formatTaskLinks(taskResultLinks)}</div>
@@ -1528,8 +1533,7 @@ function createTaskCard(task, isDetailed = false) {
                   ` : ''}
                   
                   ${taskOutput ? `
-                  <div class="flex items-start mt-2">
-                      Báo cáo: 
+                  <div class="flex items-start">
                       <div>
                           <span class="font-medium">Kết quả đầu ra:</span>
                           <p class="text-xs text-gray-600 mt-1">${taskOutput}</p>
@@ -2836,7 +2840,7 @@ function isTaskOverdue(dueDate) {
 }
 
 function formatDateForDisplay(dateInput, includeTime = false) {
-    if (!dateInput) return 'N/A';
+    if (!dateInput) return '';
     try {
         const date = new Date(dateInput);
         if (isNaN(date.getTime())) return dateInput;
@@ -3361,11 +3365,26 @@ function setupGanttEventListeners() {
     document.getElementById('next-month').addEventListener('click', () => navigateGanttMonth(1));
   }
   
-  // Tìm kiếm
+  // Tìm kiếm - thêm xử lý cho icon button
+  const searchBtn = document.getElementById('gantt-search-btn');
   const searchInput = document.getElementById('gantt-search');
-  if (searchInput) {
+  if (searchBtn && searchInput) {
+    searchBtn.addEventListener('click', () => {
+      searchInput.classList.toggle('hidden');
+      if (!searchInput.classList.contains('hidden')) {
+        searchInput.focus();
+      }
+    });
+    
     searchInput.removeEventListener('input', handleGanttSearch);
     searchInput.addEventListener('input', handleGanttSearch);
+    
+    // Ẩn ô tìm kiếm khi click ra ngoài
+    document.addEventListener('click', (e) => {
+      if (!searchBtn.contains(e.target) && !searchInput.contains(e.target)) {
+        searchInput.classList.add('hidden');
+      }
+    });
   }
 }
 
