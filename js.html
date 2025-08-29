@@ -1394,8 +1394,8 @@ function createProjectCard(project, isDetailed = false) {
                     </div>
                     ${startDate || endDate ? `
                     <div class="flex items-center justify-between">
-                        ${startDate ? `<span>Bắt đầu: ${startDate}</span>` : '<span></span>'}
-                        ${endDate ? `<span>Kết thúc: ${endDate}</span>` : '<span></span>'}
+                        ${startDate ? `<span>Bắt đầu: ${startDate}</span>` : (endDate ? `<span>Kết thúc: ${endDate}</span>` : '<span></span>')}
+                        ${startDate && endDate ? `<span>Kết thúc: ${endDate}</span>` : '<span></span>'}
                     </div>
                     ` : ''}
                 </div>
@@ -3120,7 +3120,7 @@ function renderGanttChart() {
             
             <div class="gantt-item-timeline">
               <div class="gantt-bar gantt-bar-project ${projectIsOverdue ? 'gantt-bar-overdue' : ''}" style="${projectGanttBarStyle}" data-tooltip="${project[COL.P_NAME]}: ${projectDescription}">
-                <div class="gantt-bar-label">${projectFormattedStartDate} - ${projectFormattedEndDate}: ${projectDescription}</div>
+                <div class="gantt-bar-label">${projectFormattedStartDate} - ${projectFormattedEndDate}</div>
                 <div class="gantt-progress" style="width: ${projectProgressPercent}%"></div>
               </div>
             </div>
@@ -3183,7 +3183,7 @@ function renderGanttChart() {
                         isDateInMonth(taskEndDate, currentGanttDate) || 
                         (taskStartDate < firstDay && taskEndDate > new Date(currentGanttDate.getFullYear(), currentGanttDate.getMonth() + 1, 0)) ?
                         `<div class="gantt-bar gantt-bar-task ${taskIsOverdue ? 'gantt-bar-overdue' : ''}" style="${taskGanttBarStyle}" data-tooltip="${task[COL.T_NAME]}: ${taskDescription}">
-                          <div class="gantt-bar-label">${taskFormattedStartDate} - ${taskFormattedEndDate}: ${taskDescription}</div>
+                          <div class="gantt-bar-label">${taskFormattedStartDate} - ${taskFormattedEndDate}</div>
                           <div class="gantt-progress" style="width: ${taskProgressPercent}%"></div>
                         </div>` :
                         `<div class="gantt-non-visible-task" style="height: 20px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 11px; font-style: italic;">
@@ -3202,14 +3202,9 @@ function renderGanttChart() {
     }
   });
 
-  // Hiển thị thông báo nếu không có dữ liệu
+  // Hiển thị trống nếu không có dữ liệu
   if (itemsHTML === '') {
-    itemsHTML = `
-      <div class="text-center py-16 text-gray-500">
-        <div class="text-4xl mb-3 opacity-30 font-bold">Lịch</div>
-        <p>Không có dự án hoặc nhiệm vụ nào trong ${monthName} ${year}</p>
-      </div>
-    `;
+    itemsHTML = '';
   }
   // Render dữ liệu
   ganttItems.innerHTML = itemsHTML;
@@ -3275,13 +3270,15 @@ function calculateGanttBarStyle(startDate, endDate, currentMonth, daysInMonth) {
   const effectiveStartDate = startDate < monthStart ? monthStart : startDate;
   const effectiveEndDate = endDate > monthEnd ? monthEnd : endDate;
   
-  // Tính phần trăm bắt đầu và độ rộng
-  const totalDays = daysInMonth;
+  // Tính toán chính xác hơn
   const startDay = effectiveStartDate.getDate();
   const endDay = effectiveEndDate.getDate();
   
-  const leftPercent = ((startDay - 1) / totalDays) * 100;
-  const widthPercent = ((endDay - startDay + 1) / totalDays) * 100;
+  // Tính vị trí bắt đầu và kết thúc theo phần trăm
+  // Mỗi ngày chiếm 1/daysInMonth của chiều rộng
+  const dayWidth = 100 / daysInMonth;
+  const leftPercent = (startDay - 1) * dayWidth;
+  const widthPercent = (endDay - startDay + 1) * dayWidth;
   
   return `left: ${leftPercent}%; width: ${widthPercent}%;`;
 }
