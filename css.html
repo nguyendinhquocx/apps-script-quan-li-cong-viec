@@ -2173,29 +2173,44 @@ main {
   font-weight: 500;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   position: sticky;
   left: 0;
   background: white;
   z-index: 10;
   border-right: 1px solid rgba(229, 231, 235, 0.8);
+  gap: 8px;
 }
 
 .gantt-item-label i {
   margin-right: 8px;
   width: 16px;
   text-align: center;
+  flex-shrink: 0;
+}
+
+/* Đảm bảo layout không bị chồng lấn */
+.gantt-item-label .flex-1 {
+  overflow: hidden;
+}
+
+.gantt-item-label .truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .gantt-item-actions {
-  display: none;
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
+  display: flex;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  flex-shrink: 0;
+  gap: 4px;
 }
 
 .gantt-item:hover .gantt-item-actions {
-  display: flex;
+  opacity: 1;
 }
 
 .gantt-item-timeline {
@@ -2231,7 +2246,7 @@ main {
 .gantt-bar-label {
   position: absolute;
   font-size: 9px;
-  color: white;
+  color: #1f2937;
   font-weight: 500;
   top: 50%;
   transform: translateY(-50%);
@@ -2240,7 +2255,7 @@ main {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: calc(100% - 16px);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  text-shadow: none;
 }
 
 .gantt-progress {

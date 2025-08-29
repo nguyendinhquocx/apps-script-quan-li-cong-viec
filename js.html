@@ -3102,14 +3102,16 @@ function renderGanttChart() {
         <div class="gantt-project-group" data-project-id="${projectId}">
           <div class="gantt-item" data-id="${projectId}" data-type="project">
             <div class="gantt-item-label">
-              <button class="gantt-toggle-btn mr-2 hover:bg-gray-100 rounded transition-colors duration-200" data-project="${projectId}">
-                ∨
-              </button>
-              
-              <span class="truncate cursor-pointer hover:text-blue-600 transition-colors duration-200" onclick="showProjectDetailsModal('${projectId}', '${project[COL.P_NAME]}')">${project[COL.P_NAME]}</span>
+              <div class="flex items-center flex-1 min-w-0">
+                <button class="gantt-toggle-btn mr-2 hover:bg-gray-100 rounded transition-colors duration-200 flex-shrink-0" data-project="${projectId}">
+                  ∨
+                </button>
+                
+                <span class="truncate cursor-pointer hover:text-blue-600 transition-colors duration-200" onclick="showProjectDetailsModal('${projectId}', '${project[COL.P_NAME]}')">${project[COL.P_NAME]}</span>
+              </div>
               
               <div class="gantt-item-actions">
-                <button class="action-btn action-btn-edit edit-btn mr-1" data-type="project" data-id="${projectId}" title="Chỉnh sửa">
+                <button class="action-btn action-btn-edit edit-btn" data-type="project" data-id="${projectId}" title="Chỉnh sửa">
                   Sửa
                 </button>
                 <button class="action-btn action-btn-delete delete-btn" data-type="project" data-id="${projectId}" data-name="${project[COL.P_NAME]}" title="Xóa">
@@ -3155,15 +3157,14 @@ function renderGanttChart() {
                 return `
                   <div class="gantt-item gantt-task-item" data-id="${task[COL.T_ID]}" data-type="task" data-project-id="${task[COL.T_PID]}">
                     <div class="gantt-item-label">
-                      
-                      <div class="flex flex-col">
+                      <div class="flex flex-col flex-1 min-w-0">
                         <span class="truncate cursor-pointer hover:text-blue-600 transition-colors duration-200" onclick="openEditModal('task', '${task[COL.T_ID]}')">${task[COL.T_NAME]}</span>
                         <span class="text-xs text-gray-500 truncate">${taskAssignee} - ${taskStatus} - ${taskPriority}</span>
                         
                         ${hasLinks ? `
-                          <div class="flex gap-2 mt-1">
+                          <div class="flex gap-2 mt-1 overflow-x-auto">
                             ${taskLinks.map((link, index) => `
-                              <a href="${link}" target="_blank" class="text-xs text-blue-600 hover:underline flex items-center">
+                              <a href="${link}" target="_blank" class="text-xs text-blue-600 hover:underline flex items-center flex-shrink-0">
                                 Link ${index + 1}
                               </a>
                             `).join('')}
