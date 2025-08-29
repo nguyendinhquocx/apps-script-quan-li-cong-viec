@@ -38,7 +38,7 @@ let expandedProjects = new Set(); // Lưu ID của các dự án đang xổ
 const COL = {
     P_ID: "Mã dự án", P_NAME: "Tên dự án", P_DESC: "Mô tả dự án",
     P_MANAGER: "Quản lý dự án", P_START: "Ngày bắt đầu", P_END: "Ngày kết thúc",
-    P_STATUS: "Trạng thái dự án",
+    P_STATUS: "Trạng thái dự án", P_IS_PUBLIC: "Dự án chung",
     T_ID: "Mã nhiệm vụ", T_PID: "Mã dự án", T_NAME: "Tên nhiệm vụ",
     T_DESC: "Mô tả nhiệm vụ", T_ASSIGNEE: "Người thực hiện", T_STATUS: "Trạng thái",
     T_PRIORITY: "Ưu tiên", T_START: "Ngày bắt đầu", T_DUE: "Hạn chót",
@@ -1206,7 +1206,10 @@ function createCompactProjectItem(project) {
                 <div class="project-info">
                     <div class="flex items-start justify-between">
                         <div class="flex-1 min-w-0">
-                            <h4 class="project-title">${projectName}</h4>
+                            <h4 class="project-title">
+                                ${projectName}
+                                ${isPublicProject(project) ? '<span class="ml-2 text-blue-600" title="Dự án chung - Tất cả nhân viên có thể thêm nhiệm vụ">🌐</span>' : ''}
+                            </h4>
                             <p class="project-description">${projectDesc}</p>
                             <div class="project-meta">
                               <span class="status-badge ${statusClass}">${projectStatus}</span>
@@ -1477,6 +1480,7 @@ function createProjectCard(project, isDetailed = false) {
     const endDate = formatDateForDisplay(project[COL.P_END]);
     
     const statusClass = getStatusClass(projectStatus);
+    const publicBadge = isPublicProject(project) ? `<span class="status-badge bg-blue-100 text-blue-800 ml-2">🌐 Dự án chung</span>` : '';
     
     return `
         <div class="project-card clickable-project-card cursor-pointer" data-id="${projectId}">
@@ -1484,7 +1488,10 @@ function createProjectCard(project, isDetailed = false) {
                 <div class="flex-1">
                     <h4 class="font-semibold text-gray-900 mb-1">${projectName}</h4>
                     ${projectDesc ? `<p class="text-sm text-gray-600 mb-2">${projectDesc}</p>` : ''}
-                    <span class="status-badge ${statusClass}">${projectStatus}</span>
+                    <div class="flex items-center flex-wrap">
+                        <span class="status-badge ${statusClass}">${projectStatus}</span>
+                        ${publicBadge}
+                    </div>
                 </div>
                 <div class="flex space-x-2 ml-4">
                     <button class="action-btn action-btn-edit edit-btn" data-type="project" data-id="${projectId}" title="Chỉnh sửa">
@@ -2495,11 +2502,23 @@ function createProjectModal(isEdit, data) {
                   <div class="form-group">
                       <label class="form-label">Trạng thái</label>
                       <select name="status" class="form-select">
-                          <option value="Chưa bắt đầu" ${isEdit && data[COL.P_STATUS] === 'Chưa bắt đầu' ? 'selected' : ''}>Chưa bắt đầu</option>
+                          <option value="Chờ xử lý" ${isEdit && data[COL.P_STATUS] === 'Chờ xử lý' ? 'selected' : ''}>Chờ xử lý</option>
                           <option value="Đang thực hiện" ${isEdit && data[COL.P_STATUS] === 'Đang thực hiện' ? 'selected' : ''}>Đang thực hiện</option>
                           <option value="Hoàn thành" ${isEdit && data[COL.P_STATUS] === 'Hoàn thành' ? 'selected' : ''}>Hoàn thành</option>
                       </select>
                   </div>
+                  
+                  ${isAdmin() ? `
+                      <div class="form-group">
+                          <label class="flex items-center space-x-3 cursor-pointer">
+                              <input type="checkbox" name="isPublic" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2" ${isEdit && isPublicProject(data) ? 'checked' : ''}>
+                              <span class="text-sm font-medium text-gray-700">
+                                  🌐 Cho phép tất cả nhân viên thêm nhiệm vụ vào dự án này
+                              </span>
+                          </label>
+                          <p class="text-xs text-gray-500 mt-1 ml-7">Dự án này sẽ xuất hiện trong danh sách khi tất cả nhân viên tạo nhiệm vụ mới</p>
+                      </div>
+                  ` : ''}
                   
               </form>
           </div>
@@ -2553,9 +2572,10 @@ function createTaskModal(isEdit, data) {
                       <label class="form-label">Thuộc dự án *</label>
                       <select name="projectId" class="form-select" required>
                           <option value="">-- Chọn dự án --</option>
-                          ${(isAdmin() || isManager() ? allProjects : getUserAllowedProjects()).map(project => {
+                          ${getAvailableProjectsForTask().map(project => {
                               const selected = isEdit && data[COL.T_PID] === project[COL.P_ID] ? 'selected' : '';
-                              return `<option value="${project[COL.P_ID]}" ${selected}>${project[COL.P_NAME]} (${project[COL.P_ID]})</option>`;
+                              const publicLabel = isPublicProject(project) ? ' 🌐' : '';
+                              return `<option value="${project[COL.P_ID]}" ${selected}>${project[COL.P_NAME]}${publicLabel} (${project[COL.P_ID]})</option>`;
                           }).join('')}
                       </select>
                   </div>
@@ -2699,6 +2719,45 @@ function createStaffModal(isEdit, data) {
 }
 
 // === Enhanced Form Handlers with Button Loading ===
+
+// === Public Project Helper Functions ===
+function isPublicProject(project) {
+    // An toàn: kiểm tra dự án có tồn tại và có thuộc tính isPublic
+    if (!project) return false;
+    const publicValue = project[COL.P_IS_PUBLIC];
+    // Kiểm tra các trường hợp: true, "true", "TRUE", "1"
+    return publicValue === true || 
+           publicValue === "true" || 
+           publicValue === "TRUE" || 
+           publicValue === "1";
+}
+
+function getAvailableProjectsForTask() {
+    if (!allProjects) return [];
+    
+    if (isAdmin() || isManager()) {
+        // Admin và Manager có thể thấy tất cả dự án
+        return allProjects;
+    } else {
+        // Nhân viên có thể thấy:
+        // 1. Dự án mà họ được giao (existing logic)
+        // 2. Dự án public (new feature)
+        const userProjects = getUserAllowedProjects() || [];
+        const publicProjects = allProjects.filter(p => isPublicProject(p)) || [];
+        
+        // Merge và remove duplicates
+        const availableProjects = [...userProjects];
+        publicProjects.forEach(publicProject => {
+            if (!availableProjects.find(userProject => 
+                userProject[COL.P_ID] === publicProject[COL.P_ID])) {
+                availableProjects.push(publicProject);
+            }
+        });
+        
+        return availableProjects;
+    }
+}
+
 function handleAdd(type) {
     if (!isAuthenticated) {
         showToast('Vui lòng đăng nhập', 'error');
@@ -2714,14 +2773,20 @@ function handleAdd(type) {
         data[key] = value;
     }
     
-    // THÊM: Validation cho task của user thường
+    // Xử lý đặc biệt cho checkbox isPublic
+    if (type === 'project') {
+        data.isPublic = form.querySelector('input[name="isPublic"]')?.checked || false;
+        console.log('Project data being sent:', data); // Debug log
+    }
+    
+    // THÊM: Validation cho task của user thường - updated for public projects
     if (type === 'task' && !isAdmin()) {
         const selectedProjectId = data.projectId;
-        const allowedProjects = getUserAllowedProjects();
-        const isAllowed = allowedProjects.some(p => p[COL.P_ID] === selectedProjectId);
+        const availableProjects = getAvailableProjectsForTask();
+        const isAllowed = availableProjects.some(p => p[COL.P_ID] === selectedProjectId);
         
         if (!isAllowed) {
-            showToast('Bạn chỉ có thể tạo nhiệm vụ trong các dự án mà bạn đã được giao việc', 'error');
+            showToast('Bạn chỉ có thể tạo nhiệm vụ trong các dự án được phép hoặc dự án chung', 'error');
             return;
         }
     }
@@ -2798,6 +2863,12 @@ function handleEdit(type, originalData) {
     let data = {};
     for (let [key, value] of formData.entries()) {
         if (key !== 'id') data[key] = value;
+    }
+    
+    // Xử lý đặc biệt cho checkbox isPublic
+    if (type === 'project') {
+        data.isPublic = form.querySelector('input[name="isPublic"]')?.checked || false;
+        console.log('Project edit data being sent:', data); // Debug log
     }
     
     const id = formData.get('id');
@@ -3534,6 +3605,7 @@ function renderGanttChart() {
       const projectFormattedEndDate = formatDateForGantt(project[COL.P_END]);
       const projectDescription = project[COL.P_DESC] || 'Không có mô tả';
       const projectId = project[COL.P_ID];
+      const publicIcon = isPublicProject(project) ? '<span class="ml-1 text-blue-600" title="Dự án chung">🌐</span>' : '';
       
       itemsHTML += `
         <div class="gantt-project-group" data-project-id="${projectId}">
@@ -3544,7 +3616,7 @@ function renderGanttChart() {
                   ∨
                 </button>
                 
-                <span class="truncate cursor-pointer hover:text-blue-600 transition-colors duration-200" onclick="showProjectDetailsModal('${projectId}', '${project[COL.P_NAME]}')">${project[COL.P_NAME]}</span>
+                <span class="truncate cursor-pointer hover:text-blue-600 transition-colors duration-200" onclick="showProjectDetailsModal('${projectId}', '${project[COL.P_NAME]}')">${project[COL.P_NAME]}${publicIcon}</span>
               </div>
               
               <div class="gantt-item-actions">

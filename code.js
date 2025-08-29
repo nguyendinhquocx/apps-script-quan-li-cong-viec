@@ -32,6 +32,7 @@ const PROJECT_MANAGER_COLUMN_NAME = "Quản lý dự án";
 const PROJECT_START_DATE_COLUMN_NAME = "Ngày bắt đầu";
 const PROJECT_END_DATE_COLUMN_NAME = "Ngày kết thúc";
 const PROJECT_STATUS_COLUMN_NAME = "Trạng thái dự án";
+const PROJECT_IS_PUBLIC_COLUMN_NAME = "Dự án chung";
 
 // === Cột sheet "Nhân sự" ===
 const STAFF_ID_COLUMN_NAME = "Mã NV";
@@ -738,7 +739,7 @@ function addProject(projectData) {
     const projectSheet = getOrCreateSheet(ss, PROJECT_SHEET_NAME, [
       PROJECT_ID_COLUMN_NAME, PROJECT_NAME_COLUMN_NAME, PROJECT_DESC_COLUMN_NAME,
       PROJECT_MANAGER_COLUMN_NAME, PROJECT_START_DATE_COLUMN_NAME, 
-      PROJECT_END_DATE_COLUMN_NAME, PROJECT_STATUS_COLUMN_NAME
+      PROJECT_END_DATE_COLUMN_NAME, PROJECT_STATUS_COLUMN_NAME, PROJECT_IS_PUBLIC_COLUMN_NAME
     ]);
     
     const headers = getHeaders(projectSheet);
@@ -762,6 +763,7 @@ function addProject(projectData) {
     newRow[headers.indexOf(PROJECT_START_DATE_COLUMN_NAME)] = parseDate(projectData.startDate);
     newRow[headers.indexOf(PROJECT_END_DATE_COLUMN_NAME)] = parseDate(projectData.endDate);
     newRow[headers.indexOf(PROJECT_STATUS_COLUMN_NAME)] = projectData.status || 'Chưa bắt đầu';
+    newRow[headers.indexOf(PROJECT_IS_PUBLIC_COLUMN_NAME)] = projectData.isPublic === 'on' || projectData.isPublic === true || projectData.isPublic === 'true' ? 'TRUE' : 'FALSE';
 
     console.log("Adding project row:", newRow);
     projectSheet.appendRow(newRow);
@@ -814,7 +816,8 @@ function updateProject(projectId, projectData) {
       [headers.indexOf(PROJECT_MANAGER_COLUMN_NAME), projectData.manager],
       [headers.indexOf(PROJECT_START_DATE_COLUMN_NAME), parseDate(projectData.startDate)],
       [headers.indexOf(PROJECT_END_DATE_COLUMN_NAME), parseDate(projectData.endDate)],
-      [headers.indexOf(PROJECT_STATUS_COLUMN_NAME), projectData.status]
+      [headers.indexOf(PROJECT_STATUS_COLUMN_NAME), projectData.status],
+      [headers.indexOf(PROJECT_IS_PUBLIC_COLUMN_NAME), projectData.isPublic === 'on' || projectData.isPublic === true || projectData.isPublic === 'true' ? 'TRUE' : 'FALSE']
     ];
 
     updates.forEach(([index, newValue]) => {
