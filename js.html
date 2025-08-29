@@ -644,13 +644,15 @@ function setupEventListeners() {
             }
         }
 
-        // THÊM: Xử lý nút view-project-btn
-        if (e.target.matches('.view-project-btn') || e.target.closest('.view-project-btn')) {
-            const btn = e.target.matches('.view-project-btn') ? e.target : e.target.closest('.view-project-btn');
-            const projectId = btn.dataset.id;
-            const projectName = btn.dataset.name;
+        // THÊM: Xử lý click vào project card
+        if (e.target.closest('.clickable-project-card') && !e.target.closest('.action-btn')) {
+            const card = e.target.closest('.clickable-project-card');
+            const projectId = card.dataset.id;
             
             if (projectId) {
+                // Get project data
+                const project = allProjects.find(p => p[COL.P_ID] === projectId);
+                const projectName = project ? project[COL.P_NAME] : 'Unknown Project';
                 showProjectDetailsModal(projectId, projectName);
             }
         }
@@ -1357,7 +1359,7 @@ function createProjectCard(project, isDetailed = false) {
     const statusClass = getStatusClass(projectStatus);
     
     return `
-        <div class="project-card" data-id="${projectId}">
+        <div class="project-card clickable-project-card cursor-pointer" data-id="${projectId}">
             <div class="flex items-start justify-between mb-4">
                 <div class="flex-1">
                     <h4 class="font-semibold text-gray-900 text-lg mb-1">${projectName}</h4>
@@ -1365,32 +1367,26 @@ function createProjectCard(project, isDetailed = false) {
                     <span class="status-badge ${statusClass}">${projectStatus}</span>
                 </div>
                 <div class="flex space-x-2 ml-4">
-                    <!-- Thêm nút con mắt ở đây -->
-                    <button class="action-btn action-btn-view view-project-btn" data-type="project" data-id="${projectId}" data-name="${projectName}" title="Xem chi tiết">
-                        Xem
-                    </button>
                     <button class="action-btn action-btn-edit edit-btn" data-type="project" data-id="${projectId}" title="Chỉnh sửa">
-                             Sửa
-                         </button>
-                         <button class="action-btn action-btn-delete delete-btn" data-type="project" data-id="${projectId}" data-name="${projectName}" title="Xóa">
-                             Xóa
-                         </button>
+                        Sửa
+                    </button>
+                    <button class="action-btn action-btn-delete delete-btn" data-type="project" data-id="${projectId}" data-name="${projectName}" title="Xóa">
+                        Xóa
+                    </button>
                 </div>
             </div>
             
             ${isDetailed ? `
                 <div class="space-y-2 text-sm text-gray-600">
                     <div class="flex items-center">
-                        
                         <span>Quản lý: ${projectManager}</span>
                     </div>
-                      <div class="flex items-center">
-                          Bắt đầu: 
-                          <span>Bắt đầu: ${startDate}</span>
-                          
-                          Kết thúc: 
-                          <span>Kết thúc: ${endDate}</span>
-                      </div>
+                    <div class="flex items-center">
+                        <span>Bắt đầu: ${startDate}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span>Kết thúc: ${endDate}</span>
+                    </div>
                 </div>
             ` : ''}
         </div>

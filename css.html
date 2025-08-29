@@ -112,6 +112,40 @@ aside {
   flex-direction: column;
 }
 
+/* Clickable Project Cards */
+.clickable-project-card {
+  transition: var(--transition-smooth);
+}
+
+.clickable-project-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.clickable-project-card .action-btn {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.clickable-project-card:hover .action-btn {
+  opacity: 1;
+}
+
+/* Plus Button */
+#add-project-standalone {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#add-project-standalone:hover {
+  transform: scale(1.1);
+}
+
 /* Action Buttons - Remove backgrounds */
 .action-btn {
   background: none !important;
@@ -211,7 +245,8 @@ aside {
 
 .btn-secondary:hover:not(.loading) {
   transform: translateY(-1px);
-  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+  background: var(--bg-gray);
+  color: var(--text-black);
 }
 
 .btn-secondary.loading {
@@ -1011,13 +1046,22 @@ aside {
   margin: 4px;
   white-space: nowrap;
   font-size: 13px;  /* THÊM dòng này */
-  background: #ffffff;
+  background: transparent;
 }
 
 .quick-add-item:hover {
   background: #f3f4f6;
   color: #374151;
   transform: translateX(4px);
+}
+
+/* Dropdown Background Override */
+.glass-card {
+  background: #ffffff !important;
+}
+
+.glass-card:hover {
+  background: #ffffff !important;
 }
 
 .quick-add-item i {
