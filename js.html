@@ -1100,7 +1100,7 @@ function renderStats(stats) {
     // Tính toán dự án đang làm (user-specific)
     const pendingTasks = userTasks.filter(task => {
         const status = (task[COL.T_STATUS] || '').toLowerCase();
-        return status.includes('chưa bắt đầu');
+        return status === 'chưa bắt đầu';
     }).length;
 
     const ongoingTasks = userTasks.filter(task => {
@@ -1438,13 +1438,13 @@ function renderProjects() {
   
   // Group projects by status
   const groupedProjects = {
-    'Chờ xử lý': [],
+    'Chưa bắt đầu': [],
     'Đang thực hiện': [],
     'Hoàn thành': []
   };
   
   userProjects.forEach(project => {
-    const status = project[COL.P_STATUS] || 'Chờ xử lý';
+    const status = project[COL.P_STATUS] || 'Chưa bắt đầu';
     if (groupedProjects[status]) {
       groupedProjects[status].push(project);
     }
@@ -1452,18 +1452,32 @@ function renderProjects() {
   
   // Render each group
   const containers = {
-    'Chờ xử lý': 'projects-pending',
+    'Chưa bắt đầu': 'projects-pending',
     'Đang thực hiện': 'projects-active', 
     'Hoàn thành': 'projects-completed'
+  };
+  
+  // Update headers with counts
+  const statusLabels = {
+    'Chưa bắt đầu': 'Chưa bắt đầu',
+    'Đang thực hiện': 'Đang thực hiện', 
+    'Hoàn thành': 'Hoàn thành'
   };
   
   Object.keys(containers).forEach(status => {
     const container = document.getElementById(containers[status]);
     if (!container) return;
     
+    // Update header with count
+    const headerElement = container.parentElement.querySelector('h3');
+    if (headerElement) {
+      const count = groupedProjects[status] ? groupedProjects[status].length : 0;
+      headerElement.textContent = `${statusLabels[status]} (${count})`;
+    }
+    
     const projects = groupedProjects[status] || [];
     if (projects.length === 0) {
-      container.innerHTML = '';
+      container.innerHTML = '<div class="text-gray-500 text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">Chưa có dự án nào</div>';
     } else {
       container.innerHTML = projects.map(project => createProjectCard(project, true)).join('');
     }
@@ -1557,13 +1571,13 @@ function renderTasks() {
   
   // Group tasks by status
   const tasksByStatus = {
-    'Chờ xử lý': [],
+    'Chưa bắt đầu': [],
     'Đang thực hiện': [],
     'Hoàn thành': []
   };
   
   userTasks.forEach(task => {
-    const status = task[COL.T_STATUS] || 'Chờ xử lý';
+    const status = task[COL.T_STATUS] || 'Chưa bắt đầu';
     if (tasksByStatus[status]) {
       tasksByStatus[status].push(task);
     }
@@ -1584,16 +1598,17 @@ function renderTasks() {
   let html = '';
   Object.keys(tasksByStatus).forEach(status => {
     const tasks = tasksByStatus[status];
-    if (tasks.length > 0) {
-      html += `
-        <div class="mb-8">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">${status}</h3>
-          <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            ${tasks.map(task => createTaskCard(task, true)).join('')}
-          </div>
+    html += `
+      <div class="mb-8">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">${status} (${tasks.length})</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          ${tasks.length > 0 
+            ? tasks.map(task => createTaskCard(task, true)).join('')
+            : '<div class="text-gray-500 text-center py-8 col-span-full border-2 border-dashed border-gray-200 rounded-lg">Chưa có nhiệm vụ nào</div>'
+          }
         </div>
-      `;
-    }
+      </div>
+    `;
   });
   
   if (html === '') {
@@ -2502,7 +2517,7 @@ function createProjectModal(isEdit, data) {
                   <div class="form-group">
                       <label class="form-label">Trạng thái</label>
                       <select name="status" class="form-select">
-                          <option value="Chờ xử lý" ${isEdit && data[COL.P_STATUS] === 'Chờ xử lý' ? 'selected' : ''}>Chờ xử lý</option>
+                          <option value="Chưa bắt đầu" ${isEdit && data[COL.P_STATUS] === 'Chưa bắt đầu' ? 'selected' : ''}>Chưa bắt đầu</option>
                           <option value="Đang thực hiện" ${isEdit && data[COL.P_STATUS] === 'Đang thực hiện' ? 'selected' : ''}>Đang thực hiện</option>
                           <option value="Hoàn thành" ${isEdit && data[COL.P_STATUS] === 'Hoàn thành' ? 'selected' : ''}>Hoàn thành</option>
                       </select>
