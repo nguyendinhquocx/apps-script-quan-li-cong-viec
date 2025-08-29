@@ -2706,7 +2706,7 @@ function handleAdd(type) {
     }
     
     const form = document.getElementById(`${type}-form`);
-    const submitBtn = form.querySelector('button[type="submit"]');
+    const submitBtn = document.querySelector(`button[form="${type}-form"][type="submit"]`);
     const formData = new FormData(form);
     
     let data = {};
@@ -2773,7 +2773,7 @@ function handleAdd(type) {
             if (response.success) {
                 showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} đã được tạo thành công!`, 'success');
                 closeModal(`${type}-modal`);
-                refreshData(); // Refresh data instead of full initialization
+                forceRefreshAllSections(); // Force refresh all sections including current view
             } else {
                 showToast(response.error || 'Có lỗi xảy ra', 'error');
             }
@@ -2792,7 +2792,7 @@ function handleEdit(type, originalData) {
     }
     
     const form = document.getElementById(`${type}-form`);
-    const submitBtn = form.querySelector('button[type="submit"]');
+    const submitBtn = document.querySelector(`button[form="${type}-form"][type="submit"]`);
     const formData = new FormData(form);
     
     let data = {};
@@ -2816,7 +2816,7 @@ function handleEdit(type, originalData) {
             if (response.success) {
                 showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} đã được cập nhật thành công!`, 'success');
                 closeModal(`${type}-modal`);
-                refreshData(); // Refresh data instead of full initialization
+                forceRefreshAllSections(); // Force refresh all sections including current view
             } else {
                 showToast(response.error || 'Có lỗi xảy ra', 'error');
             }
@@ -2849,7 +2849,7 @@ function confirmDelete(type, id, name) {
                 if (deleteBtn) setButtonLoading(deleteBtn, false);
                 if (response.success) {
                     showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} đã được xóa thành công!`, 'success');
-                    refreshData(); // Refresh data instead of full initialization
+                    forceRefreshAllSections(); // Force refresh all sections including current view
                 } else {
                     showToast(response.error || 'Có lỗi xảy ra', 'error');
                 }
@@ -2883,6 +2883,44 @@ function refreshData() {
         .getDataForUser();
 }
 
+function forceRefreshAllSections() {
+    if (!isAuthenticated) return;
+    
+    google.script.run
+        .withSuccessHandler(function(response) {
+            if (response.success) {
+                // Update global data
+                allProjects = response.projects || [];
+                allTasks = response.tasks || [];
+                allStaff = response.staff || [];
+                
+                // Force refresh all sections regardless of current view
+                renderStats(response.summaryStats);
+                renderProjectTaskTree();
+                renderPriorityTasks();
+                renderProjects();
+                renderTasks();
+                renderStaff();
+                renderChart(response.chartData);
+                renderProjectProgressChart();
+                renderStaffPerformanceChart();
+                renderActivity(response.recentActivities);
+                renderNotifications(response.notifications);
+                populateDropdowns();
+                
+                if (currentSection === 'gantt') {
+                    renderGanttChart();
+                }
+            } else {
+                showToast(response.error || 'Lỗi khi tải dữ liệu', 'error');
+            }
+        })
+        .withFailureHandler(function(error) {
+            showToast('Lỗi khi tải dữ liệu: ' + error.message, 'error');
+        })
+        .getDataForUser();
+}
+
 // === Load Notifications Separately ===
 function loadNotifications() {
     if (!isAuthenticated) return;
@@ -2911,7 +2949,12 @@ function loadNotifications() {
 
 // === Button Loading State Management ===
 function setButtonLoading(button, isLoading) {
-    if (!button) return;
+    if (!button) {
+        console.warn('setButtonLoading: button not found');
+        return;
+    }
+    
+    console.log('setButtonLoading:', button, 'isLoading:', isLoading);
     
     if (isLoading) {
         button.classList.add('loading');
@@ -2920,13 +2963,14 @@ function setButtonLoading(button, isLoading) {
         if (!button.dataset.originalContent) {
             button.dataset.originalContent = button.innerHTML;
         }
-        button.innerHTML = '';
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     } else {
         button.classList.remove('loading');
         button.disabled = false;
         // Restore original content
         if (button.dataset.originalContent) {
             button.innerHTML = button.dataset.originalContent;
+            delete button.dataset.originalContent;
         }
     }
 }
@@ -4057,7 +4101,7 @@ function updateBackgroundElements() {
   renderProjectProgressChart();
   renderStaffPerformanceChart();
   
-  // Update sections only if user is not viewing them
+  // Update sections only if user is not viewing them (for background sync)
   if (currentSection !== 'projects') {
     renderProjects();
   }
