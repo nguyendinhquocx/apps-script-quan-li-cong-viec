@@ -24,8 +24,8 @@ let interactionTimeout = null;
 
 // === Sync Configuration ===
 const SYNC_CONFIG = {
-    NOTIFICATION_INTERVAL: 30000,  // 30 seconds
-    DATA_INTERVAL: 60000,         // 1 minute  
+    NOTIFICATION_INTERVAL: 120000,  // 2 minutes (tăng từ 30s)
+    DATA_INTERVAL: 300000,         // 5 minutes (tăng từ 1 minute)  
     USER_INTERACTION_DELAY: 5000, // 5 seconds after user stops interacting
     SYNC_RETRY_DELAY: 10000       // 10 seconds retry delay
 };
@@ -523,17 +523,16 @@ function clearAllSections() {
 
 function updatePageTitle() {
     const pageTitle = document.getElementById('page-title');
-    if (pageTitle && currentUser) {
+    if (pageTitle) {
         const sectionTitles = {
-            'overview': 'Tổng Quan',
+            'overview': 'Tổng quan',
             'projects': 'Quản lý Dự án', 
             'tasks': 'Quản lý Nhiệm vụ',
             'staff': 'Quản lý Nhân viên'
         };
         
         const baseTitle = sectionTitles[currentSection] || 'Dashboard';
-        const userName = currentUser.name || 'User';
-        pageTitle.textContent = `${baseTitle} - ${userName}`;
+        pageTitle.textContent = baseTitle;
     }
 }
 
@@ -3890,10 +3889,6 @@ async function performNotificationSync() {
   try {
     console.log('🔔 Syncing notifications...');
     
-    // Set subtle visual indicator for auto sync
-    const syncIcon = document.getElementById('sync-icon');
-    if (syncIcon) syncIcon.style.color = '#9CA3AF'; // gray-400
-    
     const response = await new Promise((resolve, reject) => {
       google.script.run
         .withSuccessHandler(resolve)
@@ -3921,14 +3916,8 @@ async function performNotificationSync() {
       
       updateNotificationBadge();
     }
-    
-    // Reset icon color
-    if (syncIcon) syncIcon.style.color = '';
   } catch (error) {
     console.error('Notification sync error:', error);
-    // Reset icon color on error
-    const syncIcon = document.getElementById('sync-icon');
-    if (syncIcon) syncIcon.style.color = '';
   }
 }
 
@@ -3936,10 +3925,6 @@ async function performNotificationSync() {
 async function performDataSync() {
   try {
     console.log('📊 Syncing data...');
-    
-    // Set subtle visual indicator for auto sync
-    const syncIcon = document.getElementById('sync-icon');
-    if (syncIcon) syncIcon.style.color = '#9CA3AF'; // gray-400
     
     const response = await new Promise((resolve, reject) => {
       google.script.run
@@ -3960,14 +3945,8 @@ async function performDataSync() {
       lastSyncTime = new Date();
       updateSyncIndicator();
     }
-    
-    // Reset icon color
-    if (syncIcon) syncIcon.style.color = '';
   } catch (error) {
     console.error('Data sync error:', error);
-    // Reset icon color on error
-    const syncIcon = document.getElementById('sync-icon');
-    if (syncIcon) syncIcon.style.color = '';
   }
 }
 
