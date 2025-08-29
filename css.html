@@ -2773,4 +2773,116 @@ main {
 .sync-toast.info {
   border-left: 4px solid #3b82f6;
 }
+
+/* === KANBAN BOARD STYLES === */
+.view-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.view-toggle .btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 0.375rem;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.view-toggle .btn.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.view-toggle .btn:hover:not(.active) {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.kanban-board {
+  display: flex;
+  gap: 1.5rem;
+  min-height: 500px;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+}
+
+.kanban-column {
+  min-width: 320px;
+  max-width: 320px;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+}
+
+.kanban-column h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #374151;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.kanban-cards {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.kanban-card {
+  background: white;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  cursor: grab;
+  transition: all 0.2s;
+}
+
+.kanban-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.kanban-card:active {
+  cursor: grabbing;
+}
+
+/* Sortable States */
+.sortable-ghost {
+  opacity: 0.4;
+  background: #f3f4f6 !important;
+}
+
+.sortable-chosen {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  transform: rotate(2deg);
+}
+
+.sortable-drag {
+  transform: rotate(5deg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Kanban Empty State */
+.kanban-empty {
+  text-align: center;
+  color: #9ca3af;
+  padding: 2rem 1rem;
+  border: 2px dashed #d1d5db;
+  border-radius: 0.5rem;
+  background: #f9fafb;
+}
+
+/* Hidden class for view toggle */
+.hidden-view {
+  display: none !important;
+}
 </style>

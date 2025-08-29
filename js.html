@@ -1535,6 +1535,13 @@ function createProjectCard(project, isDetailed = false) {
 }
 
 function renderTasks() {
+  // Check current view mode and render accordingly
+  if (currentTaskView === 'kanban') {
+    renderTasksKanban();
+    return;
+  }
+  
+  // Original list view rendering
   const container = document.getElementById('tasks-by-project');
   if (!container) return;
   
@@ -4316,5 +4323,274 @@ function calculateStats() {
     completedTasks: allTasks.filter(t => (t[COL.T_STATUS] || '').toLowerCase().includes('hoàn thành')).length,
     // Add other stats as needed
   };
+}
+
+// === KANBAN VIEW MANAGEMENT ===
+let currentTaskView = 'list'; // 'list' or 'kanban'
+let sortableInstances = []; // Store Sortable instances
+
+function toggleTaskView(view) {
+  if (currentTaskView === view) return;
+  
+  currentTaskView = view;
+  
+  // Update toggle buttons
+  document.querySelectorAll('.view-toggle .btn').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.dataset.view === view) {
+      btn.classList.add('active');
+    }
+  });
+  
+  // Show/hide views
+  const listView = document.getElementById('tasks-list-view');
+  const kanbanView = document.getElementById('tasks-kanban-view');
+  
+  if (view === 'list') {
+    listView.classList.remove('hidden-view');
+    kanbanView.classList.add('hidden-view');
+    destroySortableInstances();
+  } else {
+    listView.classList.add('hidden-view');
+    kanbanView.classList.remove('hidden-view');
+    renderTasksKanban();
+  }
+}
+
+function renderTasksKanban() {
+  const kanbanBoard = document.querySelector('#tasks-kanban-view .kanban-board');
+  if (!kanbanBoard) return;
+  
+  // Get user tasks (same logic as list view)
+  let userTasks = [];
+  
+  if (isAdmin()) {
+    userTasks = allTasks;
+  } else {
+    const userProjects = getUserAllowedProjects();
+    const userProjectIds = userProjects.map(p => p[COL.P_ID]);
+    
+    userTasks = allTasks.filter(task => {
+      if (task[COL.T_ASSIGNEE] === currentUser.name) {
+        return true;
+      }
+      
+      const projectId = task[COL.T_PID];
+      const project = allProjects.find(p => p[COL.P_ID] === projectId);
+      if (project && project[COL.P_MANAGER] === currentUser.name) {
+        return true;
+      }
+      
+      return false;
+    });
+  }
+  
+  // Group tasks by status
+  const tasksByStatus = {
+    'Chưa bắt đầu': [],
+    'Đang thực hiện': [],
+    'Hoàn thành': []
+  };
+  
+  userTasks.forEach(task => {
+    const status = task[COL.T_STATUS] || 'Chưa bắt đầu';
+    if (tasksByStatus[status]) {
+      tasksByStatus[status].push(task);
+    }
+  });
+  
+  // Render kanban columns
+  let kanbanHTML = '';
+  Object.keys(tasksByStatus).forEach(status => {
+    const tasks = tasksByStatus[status];
+    kanbanHTML += `
+      <div class="kanban-column">
+        <h3>${status} (${tasks.length})</h3>
+        <div class="kanban-cards" data-status="${status}">
+          ${tasks.length > 0 
+            ? tasks.map(task => createKanbanTaskCard(task)).join('')
+            : '<div class="kanban-empty">Chưa có nhiệm vụ nào</div>'
+          }
+        </div>
+      </div>
+    `;
+  });
+  
+  kanbanBoard.innerHTML = kanbanHTML;
+  
+  // Initialize drag & drop
+  initializeSortable();
+}
+
+function createKanbanTaskCard(task) {
+  const taskId = task[COL.T_ID];
+  const taskName = task[COL.T_NAME] || 'Không tên';
+  const taskDesc = task[COL.T_DESC] || '';
+  const assignee = task[COL.T_ASSIGNEE] || 'Chưa gán';
+  const priority = task[COL.T_PRIORITY] || 'Thường';
+  const dueDate = formatDateForDisplay(task[COL.T_DUE]);
+  const completion = task[COL.T_COMPLETION] || 0;
+  
+  // Get project info
+  const project = allProjects.find(p => p[COL.P_ID] === task[COL.T_PID]);
+  const projectName = project ? project[COL.P_NAME] : 'N/A';
+  
+  // Priority colors
+  const priorityColors = {
+    'Cao': 'bg-red-100 text-red-700',
+    'Thường': 'bg-blue-100 text-blue-700',
+    'Thấp': 'bg-gray-100 text-gray-700'
+  };
+  
+  return `
+    <div class="kanban-card" data-id="${taskId}" data-type="task">
+      <div class="flex justify-between items-start mb-2">
+        <h4 class="font-medium text-gray-900 flex-1">${taskName}</h4>
+        <span class="text-xs px-2 py-1 rounded-full ${priorityColors[priority] || priorityColors['Thường']}">
+          ${priority}
+        </span>
+      </div>
+      
+      ${taskDesc ? `<p class="text-sm text-gray-600 mb-2">${taskDesc}</p>` : ''}
+      
+      <div class="text-xs text-gray-500 mb-2">
+        <div class="flex items-center justify-between">
+          <span>📋 ${projectName}</span>
+          ${dueDate ? `<span>⏰ ${dueDate}</span>` : ''}
+        </div>
+      </div>
+      
+      <div class="flex justify-between items-center">
+        <span class="text-xs text-gray-500">👤 ${assignee}</span>
+        <div class="flex items-center">
+          <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+            <div class="bg-blue-500 h-2 rounded-full" style="width: ${completion}%"></div>
+          </div>
+          <span class="text-xs text-gray-500">${completion}%</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function initializeSortable() {
+  // Destroy existing instances
+  destroySortableInstances();
+  
+  // Initialize new instances
+  document.querySelectorAll('.kanban-cards').forEach(column => {
+    const sortable = new Sortable(column, {
+      group: 'kanban-tasks',
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      dragClass: 'sortable-drag',
+      onEnd: handleTaskDragEnd,
+      onStart: function(evt) {
+        console.log('Drag started:', evt.item.dataset.id);
+      }
+    });
+    
+    sortableInstances.push(sortable);
+  });
+}
+
+function destroySortableInstances() {
+  sortableInstances.forEach(instance => {
+    if (instance && instance.destroy) {
+      instance.destroy();
+    }
+  });
+  sortableInstances = [];
+}
+
+function handleTaskDragEnd(evt) {
+  const taskId = evt.item.dataset.id;
+  const newStatus = evt.to.dataset.status;
+  const oldStatus = evt.from.dataset.status;
+  
+  if (newStatus === oldStatus) {
+    console.log('Task moved within same column');
+    return;
+  }
+  
+  console.log(`Task ${taskId} moved from ${oldStatus} to ${newStatus}`);
+  
+  // Update task status optimistically
+  const task = allTasks.find(t => t[COL.T_ID] === taskId);
+  if (task) {
+    const oldTaskStatus = task[COL.T_STATUS];
+    task[COL.T_STATUS] = newStatus;
+    
+    // Update progress for completed tasks
+    if (newStatus === 'Hoàn thành') {
+      task[COL.T_COMPLETION] = 100;
+    }
+    
+    // Update column headers
+    updateKanbanHeaders();
+    
+    // Show loading state
+    showToast('Đang cập nhật trạng thái...', 'info');
+    
+    // Prepare update data with required fields
+    const updateData = {
+      name: task[COL.T_NAME], // Required field
+      status: newStatus,
+      projectId: task[COL.T_PID],
+      description: task[COL.T_DESC] || '',
+      assignee: task[COL.T_ASSIGNEE] || '',
+      priority: task[COL.T_PRIORITY] || 'Thường',
+      startDate: task[COL.T_START] || '',
+      dueDate: task[COL.T_DUE] || '',
+      completion: newStatus === 'Hoàn thành' ? 100 : (task[COL.T_COMPLETION] || 0)
+    };
+    
+    // Sync to backend
+    google.script.run
+      .withSuccessHandler(function(response) {
+        if (response.success) {
+          showToast('Cập nhật trạng thái thành công!', 'success');
+          // Refresh data to ensure consistency
+          refreshData();
+        } else {
+          // Revert changes on error
+          task[COL.T_STATUS] = oldTaskStatus;
+          showToast(response.error || 'Có lỗi xảy ra khi cập nhật', 'error');
+          renderTasksKanban(); // Re-render to show reverted state
+        }
+      })
+      .withFailureHandler(function(error) {
+        // Revert changes on error
+        task[COL.T_STATUS] = oldTaskStatus;
+        showToast('Lỗi: ' + error.message, 'error');
+        renderTasksKanban(); // Re-render to show reverted state
+      })
+      .updateTaskWithAuth(taskId, updateData);
+  }
+}
+
+function updateKanbanHeaders() {
+  const tasksByStatus = {
+    'Chưa bắt đầu': [],
+    'Đang thực hiện': [],
+    'Hoàn thành': []
+  };
+  
+  // Count tasks by status
+  allTasks.forEach(task => {
+    const status = task[COL.T_STATUS] || 'Chưa bắt đầu';
+    if (tasksByStatus[status]) {
+      tasksByStatus[status].push(task);
+    }
+  });
+  
+  // Update headers
+  Object.keys(tasksByStatus).forEach(status => {
+    const header = document.querySelector(`[data-status="${status}"]`)?.parentElement.querySelector('h3');
+    if (header) {
+      header.textContent = `${status} (${tasksByStatus[status].length})`;
+    }
+  });
 }
 </script>
