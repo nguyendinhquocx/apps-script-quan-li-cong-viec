@@ -606,7 +606,8 @@ function checkUserPermission(action, resourceType, resourceData = null) {
         return { success: false, error: 'Chỉ admin mới có thể quản lý nhân viên' };
 
       case 'notification':
-        return { success: false, error: 'Chỉ admin mới có thể quản lý thông báo' };
+        // Allow managers and staff to create notifications
+        return { success: true };
     }
   }
 
@@ -675,7 +676,8 @@ function checkUserPermission(action, resourceType, resourceData = null) {
       return { success: false, error: 'Chỉ admin mới có thể quản lý nhân viên' };
 
     case 'notification':
-      return { success: false, error: 'Chỉ admin mới có thể quản lý thông báo' };
+      // Allow all authenticated users to create notifications/reports
+      return { success: true };
   }
 
   return { success: false, error: 'Không có quyền thực hiện hành động này' };
