@@ -292,13 +292,9 @@ function updateUIForUser(user) {
     hideAdminButtons();
   }
 
-  // Hiển thị button thêm thông báo cho admin
+  // Hiển thị button thêm thông báo cho tất cả người dùng đã xác thực
   const addNotificationBtn = document.getElementById('add-notification-btn');
-  if (isAdminUser) {
-    if (addNotificationBtn) addNotificationBtn.classList.remove('hidden');
-  } else {
-    if (addNotificationBtn) addNotificationBtn.classList.add('hidden');
-  }
+  if (addNotificationBtn) addNotificationBtn.classList.remove('hidden'); // Show for all authenticated users
   
   // Update page title to show current user
   updatePageTitle();
@@ -620,9 +616,9 @@ function setupEventListeners() {
         if (isAuthenticated && canUserCreateTask()) openModal('task');
     });
 
-    // Thêm event listener cho nút thêm thông báo
+    // Thêm event listener cho nút thêm thông báo - Tất cả user có thể gửi
     document.getElementById('add-notification-btn')?.addEventListener('click', () => {
-      if (isAuthenticated && isAdmin()) openModal('notification');
+      if (isAuthenticated) openModal('notification'); // Allow all authenticated users
     });
 
     // Search
@@ -2594,11 +2590,43 @@ function handleAdd(type) {
     // Set button loading state
     setButtonLoading(submitBtn, true);
     
+    // Special handling for notifications
+    if (type === 'notification') {
+        // Handle ALL_STAFF recipient
+        if (data.recipient === 'ALL_STAFF') {
+            data.recipient = ''; // Server expects empty string for all staff
+        }
+        
+        // Add sender information
+        data.sender = currentUser.name;
+        data.senderRole = currentUser.role;
+        
+        const successMessage = isAdmin() || isManager() ? 'Thông báo' : 'Báo cáo';
+        
+        google.script.run
+            .withSuccessHandler(function(response) {
+                setButtonLoading(submitBtn, false);
+                if (response.success) {
+                    showToast(`${successMessage} đã được gửi thành công!`, 'success');
+                    closeModal('notification-modal');
+                    loadNotifications(); // Refresh notifications specifically
+                    refreshData(); // Refresh other data
+                } else {
+                    showToast(response.error || 'Có lỗi xảy ra', 'error');
+                }
+            })
+            .withFailureHandler(function(error) {
+                setButtonLoading(submitBtn, false);
+                showToast(`Lỗi gửi ${successMessage.toLowerCase()}: ` + error.message, 'error');
+            })
+            .addNotificationWithAuth(data);
+        return;
+    }
+    
     let apiMethod = '';
     if (type === 'project') apiMethod = 'addProjectWithAuth';
     else if (type === 'task') apiMethod = 'addTaskWithAuth';
     else if (type === 'staff') apiMethod = 'addStaffWithAuth';
-    else if (type === 'notification') apiMethod = 'addNotificationWithAuth';
     
     google.script.run
         .withSuccessHandler(function(response) {
@@ -2714,6 +2742,32 @@ function refreshData() {
             showToast('Lỗi khi tải dữ liệu: ' + error.message, 'error');
         })
         .getDataForUser();
+}
+
+// === Load Notifications Separately ===
+function loadNotifications() {
+    if (!isAuthenticated) return;
+    
+    google.script.run
+        .withSuccessHandler(function(notifications) {
+            if (notifications && Array.isArray(notifications)) {
+                allNotifications = notifications;
+                
+                // Update notification counter if it exists
+                const counter = document.getElementById('notification-counter');
+                if (counter) {
+                    const unreadCount = notifications.filter(n => !n.read).length;
+                    counter.textContent = unreadCount;
+                    counter.style.display = unreadCount > 0 ? 'inline' : 'none';
+                }
+                
+                console.log(`Loaded ${notifications.length} notifications`);
+            }
+        })
+        .withFailureHandler(function(error) {
+            console.error('Error loading notifications:', error);
+        })
+        .getNotificationsForUser();
 }
 
 // === Button Loading State Management ===
@@ -3073,45 +3127,124 @@ function canUserCreateTask() {
 }
 
 function createNotificationModal(isEdit, data) {
+  // Determine title and recipients based on user role
+  let modalTitle = 'Tạo thông báo mới';
+  let recipientOptions = '';
+  
+  if (isAdmin()) {
+    // Admin có thể gửi cho tất cả
+    modalTitle = 'Tạo thông báo mới';
+    recipientOptions = `
+      <option value="">Tất cả mọi người</option>
+      ${allStaff.map(staff => 
+        `<option value="${staff[COL.S_NAME]}">${staff[COL.S_NAME]} (${staff[COL.S_EMAIL] || 'No email'})</option>`
+      ).join('')}
+    `;
+  } else if (isManager()) {
+    // Manager chỉ có thể gửi cho nhân viên (không phải admin) hoặc lên admin
+    modalTitle = 'Gửi thông báo cho team';
+    const staffMembers = allStaff.filter(staff => {
+      const role = (staff[COL.S_ROLE] || '').toLowerCase();
+      return !role.includes('admin') && !role.includes('quản lý');
+    });
+    const adminMembers = allStaff.filter(staff => {
+      const role = (staff[COL.S_ROLE] || '').toLowerCase();
+      return role.includes('admin');
+    });
+    
+    recipientOptions = `
+      <option value="">Chọn người nhận</option>
+      <optgroup label="Gửi lên cấp trên">
+        ${adminMembers.map(admin => 
+          `<option value="${admin[COL.S_NAME]}">${admin[COL.S_NAME]} (Admin)</option>`
+        ).join('')}
+      </optgroup>
+      <optgroup label="Gửi cho nhân viên">
+        <option value="ALL_STAFF">Tất cả nhân viên</option>
+        ${staffMembers.map(staff => 
+          `<option value="${staff[COL.S_NAME]}">${staff[COL.S_NAME]} (${staff[COL.S_EMAIL] || 'No email'})</option>`
+        ).join('')}
+      </optgroup>
+    `;
+  } else {
+    // Staff chỉ có thể gửi lên quản lý hoặc admin
+    modalTitle = 'Gửi báo cáo lên cấp trên';
+    const managers = allStaff.filter(staff => {
+      if (!staff || staff[COL.S_NAME] === currentUser.name) return false; // Don't include self
+      
+      const role = (staff[COL.S_ROLE] || '').toLowerCase().trim();
+      console.log('Staff role check:', staff[COL.S_NAME], 'Role:', `"${role}"`);
+      
+      // Check for various manager/admin role patterns
+      return role.includes('admin') || 
+             role.includes('quản lý') || 
+             role.includes('manager') || 
+             role.includes('quản ly') ||
+             role.includes('giám đốc') ||
+             role.includes('trưởng') ||
+             role === 'admin' ||
+             role === 'manager';
+    });
+    
+    console.log('Found managers for staff:', managers.map(m => ({name: m[COL.S_NAME], role: m[COL.S_ROLE]})));
+    
+    recipientOptions = `
+      <option value="">Chọn người nhận</option>
+      ${managers.map(manager => 
+        `<option value="${manager[COL.S_NAME]}">${manager[COL.S_NAME]} (${manager[COL.S_ROLE]})</option>`
+      ).join('')}
+    `;
+  }
+
   return `
     <div id="notification-modal" class="modal">
       <div class="modal-content">
         <div class="flex items-center justify-between mb-6">
-          <h3 class="text-xl font-bold text-gray-900">Tạo thông báo mới</h3>
+          <h3 class="text-xl font-bold text-gray-900">${modalTitle}</h3>
           <button type="button" class="close-modal text-gray-400 hover:text-gray-600">
-            Đóng
+            <i class="fas fa-times"></i>
           </button>
         </div>
         
         <form id="notification-form">
           <div class="form-group">
-            <label class="form-label">Nội dung thông báo *</label>
-            <textarea name="content" class="form-textarea" required placeholder="Nhập nội dung thông báo..."></textarea>
+            <label class="form-label">Nội dung ${isAdmin() || isManager() ? 'thông báo' : 'báo cáo'} *</label>
+            <textarea name="content" class="form-textarea" required placeholder="Nhập nội dung ${isAdmin() || isManager() ? 'thông báo' : 'báo cáo'}..."></textarea>
           </div>
           
           <div class="form-group">
-            <label class="form-label">Người nhận</label>
-            <select name="recipient" class="form-select">
-              <option value="">Tất cả mọi người</option>
-              ${allStaff.map(staff => 
-                `<option value="${staff[COL.S_NAME]}">${staff[COL.S_NAME]} (${staff[COL.S_EMAIL] || 'No email'})</option>`
-              ).join('')}
+            <label class="form-label">Người nhận *</label>
+            <select name="recipient" class="form-select" required>
+              ${recipientOptions}
             </select>
           </div>
           
           <div class="form-group">
-            <label class="form-label">Loại thông báo</label>
+            <label class="form-label">Loại ${isAdmin() || isManager() ? 'thông báo' : 'báo cáo'}</label>
             <select name="type" class="form-select">
-              <option value="Thông báo">Thông báo chung</option>
-              <option value="Khẩn cấp">Khẩn cấp</option>
-              <option value="Công việc">Công việc</option>
-              <option value="Hệ thống">Hệ thống</option>
+              ${isAdmin() ? `
+                <option value="Thông báo">Thông báo chung</option>
+                <option value="Khẩn cấp">Khẩn cấp</option>
+                <option value="Công việc">Công việc</option>
+                <option value="Hệ thống">Hệ thống</option>
+              ` : isManager() ? `
+                <option value="Công việc">Công việc</option>
+                <option value="Thông báo">Thông báo team</option>
+                <option value="Báo cáo">Báo cáo lên cấp trên</option>
+              ` : `
+                <option value="Báo cáo">Báo cáo công việc</option>
+                <option value="Yêu cầu">Yêu cầu hỗ trợ</option>
+                <option value="Vấn đề">Báo cáo vấn đề</option>
+              `}
             </select>
+            <!-- Hidden fields for additional data -->
+            <input type="hidden" name="sender" value="${currentUser.name}">
+            <input type="hidden" name="senderRole" value="${currentUser.role}">
           </div>
           
           <div class="flex justify-end space-x-3 mt-6">
             <button type="button" class="btn-secondary close-modal">Hủy</button>
-            <button type="submit" class="btn-primary">Gửi thông báo</button>
+            <button type="submit" class="btn-primary">Gửi ${isAdmin() || isManager() ? 'thông báo' : 'báo cáo'}</button>
           </div>
         </form>
       </div>
