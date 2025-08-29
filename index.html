@@ -22,13 +22,9 @@
   <!-- Sidebar -->
   <aside id="sidebar" class="fixed left-0 top-0 h-full w-72 bg-white/80 backdrop-blur-xl border-r border-white/20 shadow-2xl z-50 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-out">
     <div class="p-6 border-b border-gray-100/50">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-200">
-          <span class="text-sm font-semibold text-black">QL</span>
-        </div>
+      <div class="flex items-center">
         <div>
           <h1 class="text-xl font-bold text-black">Quản Lý Dự Án</h1>
-          <p class="text-xs text-gray-500">Quản lý thông minh</p>
         </div>
       </div>
       
@@ -36,15 +32,20 @@
       <div id="user-section" class="mt-4">
         <!-- Logged in user info -->
         <div id="user-info" class="hidden">
-          <div class="p-3 bg-gray-50 rounded-xl border border-gray-200">
-            <div class="text-center">
+          <div class="user-hover-container relative cursor-pointer">
+            <div class="text-left">
               <p id="user-name" class="text-sm font-medium text-gray-900"></p>
-              <p id="user-role" class="text-xs text-gray-600"></p>
+            </div>
+            <!-- Hover dropdown -->
+            <div class="user-hover-dropdown absolute top-full left-0 w-full bg-white rounded-lg shadow-lg border border-gray-200 mt-1 opacity-0 invisible transition-all duration-200 z-10">
+              <div class="p-3">
+                <p id="user-role" class="text-xs text-gray-600 mb-2"></p>
+                <button id="logout-btn" class="w-full text-left px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200">
+                  Đăng xuất
+                </button>
+              </div>
             </div>
           </div>
-          <button id="logout-btn" class="w-full mt-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200">
-            Đăng xuất
-          </button>
         </div>
         
         <!-- Login button when not logged in -->
@@ -148,15 +149,14 @@
     <header class="sticky top-0 bg-white/80 backdrop-blur-xl border-b border-white/20 z-30">
       <div class="flex items-center justify-between px-6 py-4">
         <div class="flex items-center space-x-4">
-          <button id="sidebar-toggle" class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors duration-200">
+          <button id="sidebar-toggle" class="p-2 rounded-xl hover:bg-gray-100 transition-colors duration-200">
             <i class="fas fa-bars text-gray-600"></i>
           </button>
-          <button id="mobile-menu-btn" class="md:hidden p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors duration-200">
+          <button id="mobile-menu-btn" class="md:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors duration-200">
             Menu
           </button>
           <div>
             <h2 id="page-title" class="text-xl font-bold text-gray-900">Tổng Quan</h2>
-            <p class="text-sm text-gray-500">Chào mừng trở lại</p>
           </div>
         </div>
         
@@ -208,10 +208,10 @@
                 <div class="flex items-center justify-between">
                   <h3 class="font-semibold text-gray-900">Thông báo</h3>
                   <div class="flex items-center space-x-2">
-                    <button id="add-notification-btn" class="text-xs px-2 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hidden">
+                    <button id="add-notification-btn" class="text-xs px-2 py-1 bg-black text-white rounded-lg hover:bg-gray-800 hidden">
                       Thêm
                     </button>
-                    <button id="clear-notifications" class="text-xs text-blue-600 hover:text-blue-700">Xóa đã đọc</button>
+                    <button id="clear-notifications" class="text-xs text-blue-600 hover:text-blue-700">Xoá</button>
                   </div>
                 </div>
               </div>

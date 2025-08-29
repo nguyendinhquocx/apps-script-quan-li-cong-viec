@@ -98,6 +98,66 @@ body {
 
 .btn-primary.loading {
   opacity: 0.8;
+}
+
+/* User Hover Dropdown */
+.user-hover-container:hover .user-hover-dropdown {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Action Buttons - Remove backgrounds */
+.action-btn {
+  background: none !important;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.action-btn.edit {
+  color: #3b82f6;
+}
+
+.action-btn.edit:hover {
+  background: rgba(59, 130, 246, 0.1) !important;
+}
+
+.action-btn.delete {
+  color: #ef4444;
+}
+
+.action-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Expand Icon for Project Tree */
+.expand-icon {
+  background: none;
+  border: none;
+  color: #000000;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.expand-icon:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.expand-icon.expanded i {
+  transform: rotate(90deg);
+}
+
+.expand-icon i {
+  transition: transform 0.2s ease;
+}
+
+.btn-primary.disabled {
   cursor: not-allowed;
 }
 
@@ -334,7 +394,12 @@ body {
 }
 
 .card-details {
-  space-y: 12px;
+  display: flex;
+  flex-direction: column; /* Use margin for vertical spacing instead of space-y */
+}
+
+.card-details > * + * {
+  margin-top: 12px;
 }
 
 .detail-item {
@@ -396,7 +461,10 @@ body {
     flex-shrink: 0;
     min-width: 110px;
     text-align: right;
-    space-y: 4px;
+  }
+  
+  .card-actions > * + * {
+    margin-top: 4px;
   }
   
   .detail-item {
@@ -1221,22 +1289,22 @@ body {
 }
 
 .action-btn-edit {
-  background: rgba(59, 130, 246, 0.1);
+  background: none !important;
   color: #3b82f6;
 }
 
 .action-btn-edit:hover {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(59, 130, 246, 0.1) !important;
   transform: scale(1.1);
 }
 
 .action-btn-delete {
-  background: rgba(239, 68, 68, 0.1);
+  background: none !important;
   color: #ef4444;
 }
 
 .action-btn-delete:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.1) !important;
   transform: scale(1.1);
 }
 
@@ -2508,7 +2576,7 @@ main {
   
   /* Project task groups */
   .gantt-project-tasks:not(.hidden) {
-    /* Tasks được render với cùng structure, không cần margin */
+    display: block; /* Tasks được render với cùng structure, không cần margin */
   }
   
   /* Text truncation trong label */

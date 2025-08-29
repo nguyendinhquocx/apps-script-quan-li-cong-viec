@@ -1107,8 +1107,8 @@ function createCompactProjectItem(project) {
     return `
         <div class="project-tree-item" data-id="${projectId}">
             <div class="project-header">
-                <button class="project-expand-btn" data-project="${projectId}">
-                    
+                <button class="expand-icon project-expand-btn" data-project="${projectId}">
+                    <i class="fas fa-chevron-right"></i>
                 </button>
                 <div class="project-info">
                     <div class="flex items-start justify-between">
@@ -1221,13 +1221,10 @@ function createCompactTaskItem(task) {
 function toggleProjectTasks(btn) {
     const projectId = btn.dataset.project;
     const tasksContainer = document.getElementById(`tasks-${projectId}`);
-    const icon = btn.querySelector('i');
     
     if (tasksContainer.classList.contains('expanded')) {
         // Đóng dự án hiện tại
         tasksContainer.classList.remove('expanded');
-        icon.classList.remove('fa-chevron-down');
-        icon.classList.add('fa-chevron-right');
         btn.classList.remove('expanded');
     } else {
         // Đóng tất cả các dự án khác trước
@@ -1239,18 +1236,11 @@ function toggleProjectTasks(btn) {
         });
         
         allExpandedBtns.forEach(expandBtn => {
-            const btnIcon = expandBtn.querySelector('i');
-            if (btnIcon) {
-                btnIcon.classList.remove('fa-chevron-down');
-                btnIcon.classList.add('fa-chevron-right');
-            }
             expandBtn.classList.remove('expanded');
         });
         
         // Sau đó mở dự án hiện tại
         tasksContainer.classList.add('expanded');
-        icon.classList.remove('fa-chevron-right');
-        icon.classList.add('fa-chevron-down');
         btn.classList.add('expanded');
     }
 }
