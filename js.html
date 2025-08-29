@@ -509,7 +509,7 @@ function clearAllSections() {
     const statsElements = [
         'total-projects', 'completed-projects', 'project-completion-rate',
         'total-tasks', 'completed-tasks', 'task-completion-rate',
-        'active-tasks', 'pending-tasks', 'paused-tasks',
+        'active-tasks', 'pending-tasks',
         'overdue-tasks', 'overdue-total-tasks', 'overdue-rate'
     ];
     
@@ -1106,12 +1106,9 @@ function renderStats(stats) {
         return status.includes('đang');
     }).length;
 
-    const pausedTasks = userTasks.filter(task => {
-        const status = (task[COL.T_STATUS] || '').toLowerCase();
-        return status.includes('tạm dừng');
-    }).length;
+    const pausedTasks = 0; // Bỏ trạng thái 'Tạm dừng'
 
-    const activeTasks = ongoingTasks + pendingTasks + pausedTasks;
+    const activeTasks = ongoingTasks + pendingTasks;
     
     // Tính toán nhiệm vụ quá hạn (user-specific)
     const overdueTasks = userTasks.filter(task => {
@@ -1134,7 +1131,6 @@ function renderStats(stats) {
     
     document.getElementById('active-tasks').textContent = activeTasks;
     document.getElementById('pending-tasks').textContent = pendingTasks;
-    document.getElementById('paused-tasks').textContent = pausedTasks;
     
     document.getElementById('overdue-tasks').textContent = overdueTasks;
     document.getElementById('overdue-total-tasks').textContent = totalTasks;
@@ -2423,8 +2419,6 @@ function createProjectModal(isEdit, data) {
                           <option value="Chưa bắt đầu" ${isEdit && data[COL.P_STATUS] === 'Chưa bắt đầu' ? 'selected' : ''}>Chưa bắt đầu</option>
                           <option value="Đang thực hiện" ${isEdit && data[COL.P_STATUS] === 'Đang thực hiện' ? 'selected' : ''}>Đang thực hiện</option>
                           <option value="Hoàn thành" ${isEdit && data[COL.P_STATUS] === 'Hoàn thành' ? 'selected' : ''}>Hoàn thành</option>
-                          <option value="Tạm dừng" ${isEdit && data[COL.P_STATUS] === 'Tạm dừng' ? 'selected' : ''}>Tạm dừng</option>
-                          <option value="Hủy bỏ" ${isEdit && data[COL.P_STATUS] === 'Hủy bỏ' ? 'selected' : ''}>Hủy bỏ</option>
                       </select>
                   </div>
                   
@@ -2532,7 +2526,6 @@ function createTaskModal(isEdit, data) {
                               <option value="Chưa bắt đầu" ${isEdit && data[COL.T_STATUS] === 'Chưa bắt đầu' ? 'selected' : 'selected'}>Chưa bắt đầu</option>
                               <option value="Đang thực hiện" ${isEdit && data[COL.T_STATUS] === 'Đang thực hiện' ? 'selected' : ''}>Đang thực hiện</option>
                               <option value="Hoàn thành" ${isEdit && data[COL.T_STATUS] === 'Hoàn thành' ? 'selected' : ''}>Hoàn thành</option>
-                              <option value="Tạm dừng" ${isEdit && data[COL.T_STATUS] === 'Tạm dừng' ? 'selected' : ''}>Tạm dừng</option>
                           </select>
                       </div>
                       <div class="form-group">
@@ -3723,7 +3716,6 @@ function getStatusIcon(status) {
     const statusLower = (status || '').toLowerCase();
     if (statusLower.includes('hoàn thành')) return 'text-green-500';
     if (statusLower.includes('đang')) return 'text-blue-500'; 
-    if (statusLower.includes('tạm dừng')) return 'text-yellow-500';
     return 'text-gray-400'; // Chưa bắt đầu
 }
 
