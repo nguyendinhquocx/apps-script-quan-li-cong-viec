@@ -1392,14 +1392,10 @@ function createProjectCard(project, isDetailed = false) {
                     <div class="flex items-center">
                         <span>Quản lý: ${projectManager}</span>
                     </div>
-                    ${startDate ? `
-                    <div class="flex items-center">
-                        <span>Bắt đầu: ${startDate}</span>
-                    </div>
-                    ` : ''}
-                    ${endDate ? `
-                    <div class="flex items-center">
-                        <span>Kết thúc: ${endDate}</span>
+                    ${startDate || endDate ? `
+                    <div class="flex items-center justify-between">
+                        ${startDate ? `<span>Bắt đầu: ${startDate}</span>` : '<span></span>'}
+                        ${endDate ? `<span>Kết thúc: ${endDate}</span>` : '<span></span>'}
                     </div>
                     ` : ''}
                 </div>
@@ -3106,16 +3102,13 @@ function renderGanttChart() {
         <div class="gantt-project-group" data-project-id="${projectId}">
           <div class="gantt-item" data-id="${projectId}" data-type="project">
             <div class="gantt-item-label">
-              <button class="gantt-toggle-btn mr-2" data-project="${projectId}">
-                >
+              <button class="gantt-toggle-btn mr-2 hover:bg-gray-100 rounded transition-colors duration-200" data-project="${projectId}">
+                ∨
               </button>
               
-              <span class="truncate">${project[COL.P_NAME]}</span>
+              <span class="truncate cursor-pointer hover:text-blue-600 transition-colors duration-200" onclick="showProjectDetailsModal('${projectId}', '${project[COL.P_NAME]}')">${project[COL.P_NAME]}</span>
               
               <div class="gantt-item-actions">
-                <button class="action-btn action-btn-view view-project-btn mr-1" data-type="project" data-id="${projectId}" data-name="${project[COL.P_NAME]}" title="Xem chi tiết">
-                  Xem
-                </button>
                 <button class="action-btn action-btn-edit edit-btn mr-1" data-type="project" data-id="${projectId}" title="Chỉnh sửa">
                   Sửa
                 </button>
@@ -3133,7 +3126,7 @@ function renderGanttChart() {
             </div>
           </div>
           
-          <div class="gantt-project-tasks hidden" id="gantt-tasks-${projectId}">
+          <div class="gantt-project-tasks" id="gantt-tasks-${projectId}">
             ${projectTasks.map(task => {
               const taskStartDate = new Date(task[COL.T_START]);
               const taskEndDate = new Date(task[COL.T_DUE]);
@@ -3164,7 +3157,7 @@ function renderGanttChart() {
                     <div class="gantt-item-label">
                       
                       <div class="flex flex-col">
-                        <span class="truncate">${task[COL.T_NAME]} ${taskPriority.toLowerCase().includes('cao') ? '⭐' : ''}</span>
+                        <span class="truncate cursor-pointer hover:text-blue-600 transition-colors duration-200" onclick="openEditModal('task', '${task[COL.T_ID]}')">${task[COL.T_NAME]}</span>
                         <span class="text-xs text-gray-500 truncate">${taskAssignee} - ${taskStatus} - ${taskPriority}</span>
                         
                         ${hasLinks ? `
@@ -3179,9 +3172,6 @@ function renderGanttChart() {
                       </div>
                       
                       <div class="gantt-item-actions">
-                        <button class="action-btn action-btn-edit edit-btn mr-1" data-type="task" data-id="${task[COL.T_ID]}" title="Chỉnh sửa">
-                          Sửa
-                        </button>
                         <button class="action-btn action-btn-delete delete-btn" data-type="task" data-id="${task[COL.T_ID]}" data-name="${task[COL.T_NAME]}" title="Xóa">
                           Xóa
                         </button>
@@ -3230,18 +3220,14 @@ function renderGanttChart() {
     btn.addEventListener('click', toggleGanttProject);
   });
 
-  // Khôi phục trạng thái xổ của các dự án
+  // Khôi phục trạng thái xổ của các dự án  
   expandedProjects.forEach(projectId => {
     const taskContainer = document.getElementById(`gantt-tasks-${projectId}`);
     const toggleBtn = document.querySelector(`.gantt-toggle-btn[data-project="${projectId}"]`);
     
     if (taskContainer && toggleBtn) {
       taskContainer.classList.remove('hidden');
-      const icon = toggleBtn.querySelector('i');
-      if (icon) {
-        icon.classList.remove('fa-chevron-right');
-        icon.classList.add('fa-chevron-down');
-      }
+      toggleBtn.textContent = '∨'; // Mũi tên xuống
     }
   });
 }
@@ -3250,18 +3236,18 @@ function renderGanttChart() {
 function toggleGanttProject(event) {
   const projectId = this.dataset.project;
   const taskContainer = document.getElementById(`gantt-tasks-${projectId}`);
-  const icon = this.querySelector('i');
   
+  // Vì mặc định hiển thị, nên ta toggle ngược lại
   if (taskContainer.classList.contains('hidden')) {
+    // Nếu đang ẩn, hiển thị lại
     taskContainer.classList.remove('hidden');
-    icon.classList.remove('fa-chevron-right');
-    icon.classList.add('fa-chevron-down');
-    expandedProjects.add(projectId); // Thêm vào danh sách dự án đang xổ
+    this.textContent = '∨'; // Mũi tên xuống
+    expandedProjects.add(projectId);
   } else {
+    // Nếu đang hiển thị, ẩn đi  
     taskContainer.classList.add('hidden');
-    icon.classList.remove('fa-chevron-down');
-    icon.classList.add('fa-chevron-right');
-    expandedProjects.delete(projectId); // Xóa khỏi danh sách dự án đang xổ
+    this.textContent = '>'; // Mũi tên phải
+    expandedProjects.delete(projectId);
   }
 }
 
