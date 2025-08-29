@@ -1572,19 +1572,34 @@ function createStaffCard(staff) {
   
   return `
       <div class="staff-card" data-id="${staffId}">
-          <h4 class="font-semibold text-gray-900 mb-3">${staffName}</h4>
-          <p class="text-sm text-gray-600 mb-1">${staffPosition}</p>
-          <p class="text-xs text-gray-500 mb-2">${staffEmail}</p>
-          <div class="flex justify-center mb-4">
-              <span class="user-role-badge ${roleClass}">${staffRole}</span>
+          <div class="flex justify-between items-start mb-4">
+              <div class="flex-1"></div>
+              <div class="flex space-x-2">
+                  <button class="action-btn action-btn-edit edit-btn" data-type="staff" data-id="${staffId}" title="Chỉnh sửa">
+                      Sửa
+                  </button>
+                  <button class="action-btn action-btn-delete delete-btn" data-type="staff" data-id="${staffId}" data-name="${staffName}" title="Xóa">
+                      Xóa
+                  </button>
+              </div>
           </div>
-          <div class="flex justify-center space-x-2">
-              <button class="action-btn action-btn-edit edit-btn" data-type="staff" data-id="${staffId}" title="Chỉnh sửa">
-                         Sửa
-                     </button>
-                     <button class="action-btn action-btn-delete delete-btn" data-type="staff" data-id="${staffId}" data-name="${staffName}" title="Xóa">
-                         Xóa
-                     </button>
+          <div class="space-y-2 text-left">
+              <div>
+                  <span class="text-sm font-medium text-gray-700">Họ tên:</span>
+                  <span class="text-sm text-gray-900 ml-1">${staffName}</span>
+              </div>
+              <div>
+                  <span class="text-sm font-medium text-gray-700">Email:</span>
+                  <span class="text-sm text-gray-900 ml-1">${staffEmail}</span>
+              </div>
+              <div>
+                  <span class="text-sm font-medium text-gray-700">Chức vụ:</span>
+                  <span class="text-sm text-gray-900 ml-1">${staffPosition}</span>
+              </div>
+              <div>
+                  <span class="text-sm font-medium text-gray-700">Phân quyền:</span>
+                  <span class="user-role-badge ${roleClass} ml-1">${staffRole}</span>
+              </div>
           </div>
       </div>
   `;

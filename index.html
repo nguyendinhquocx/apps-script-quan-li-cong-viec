@@ -436,8 +436,8 @@
       <div id="staff-section" class="section">
         <div class="flex items-center justify-between mb-6">
           <h3 class="text-2xl font-bold text-gray-900">Quản lý nhân viên</h3>
-          <button id="add-staff-btn" class="btn-accent" onclick="if(isAuthenticated && isAdmin()) openModal('staff')">
-            Thêm nhân viên
+          <button id="add-staff-btn" class="p-3 rounded-full hover:bg-gray-100 text-gray-800 transition-colors duration-200" onclick="if(isAuthenticated && isAdmin()) openModal('staff')" title="Thêm nhân viên">
+            <i class="fas fa-plus text-lg"></i>
           </button>
         </div>
         <div id="staff-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
