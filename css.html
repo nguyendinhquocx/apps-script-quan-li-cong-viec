@@ -2678,4 +2678,83 @@ main {
     flex-shrink: 0;
   }
 }
+
+/* === Sync Button Styles === */
+#sync-btn {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+#sync-btn:hover {
+  transform: scale(1.05);
+}
+
+#sync-btn.syncing #sync-icon {
+  animation: spin 1s linear infinite;
+}
+
+#sync-btn.syncing {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Sync status tooltip */
+.sync-tooltip {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  margin-bottom: 5px;
+}
+
+#sync-btn:hover .sync-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.sync-toast {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  max-width: 300px;
+  opacity: 0;
+  transform: translateX(100%);
+  transition: all 0.3s ease;
+}
+
+.sync-toast.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.sync-toast.success {
+  border-left: 4px solid #10b981;
+}
+
+.sync-toast.info {
+  border-left: 4px solid #3b82f6;
+}
 </style>

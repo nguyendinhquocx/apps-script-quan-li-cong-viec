@@ -7,9 +7,28 @@ let staffPerformanceChart = null;
 let allProjects = [];
 let allTasks = [];
 let allStaff = [];
+let allNotifications = [];
 let currentSection = 'overview';
 let currentUser = null; // Store current logged in user
 let isAuthenticated = false;
+
+// === Sync System Variables ===
+let syncIntervals = {
+    notifications: null,
+    data: null
+};
+let lastSyncTime = null;
+let isSyncing = false;
+let userIsInteracting = false;
+let interactionTimeout = null;
+
+// === Sync Configuration ===
+const SYNC_CONFIG = {
+    NOTIFICATION_INTERVAL: 30000,  // 30 seconds
+    DATA_INTERVAL: 60000,         // 1 minute  
+    USER_INTERACTION_DELAY: 5000, // 5 seconds after user stops interacting
+    SYNC_RETRY_DELAY: 10000       // 10 seconds retry delay
+};
 
 // === Gantt Chart Variables ===
 let currentGanttDate = new Date();
@@ -213,6 +232,9 @@ function handleSuccessfulLogin(dataResponse) {
     if (currentSection === 'gantt') {
       renderGanttChart();
     }
+    
+    // Initialize Smart Sync System
+    startSyncSystemForUser();
 }
 
 function updateUIForUser(user) {
@@ -419,6 +441,9 @@ function handleLogout() {
                 allTasks = [];
                 allStaff = [];
                 
+                // Stop sync system
+                stopSyncSystemForUser();
+                
                 // Reset UI
                 document.getElementById('user-info').classList.add('hidden');
                 document.getElementById('login-prompt').classList.remove('hidden');
@@ -607,6 +632,12 @@ function setupEventListeners() {
     // Notifications
     document.getElementById('notification-btn')?.addEventListener('click', toggleNotifications);
     document.getElementById('clear-notifications')?.addEventListener('click', clearNotifications);
+
+    // Sync button
+    document.getElementById('sync-btn')?.addEventListener('click', handleManualSync);
+
+    // User interaction detection for smart sync
+    setupUserInteractionDetection();
 
     // Global click handler for action buttons
     document.addEventListener('click', function(e) {
@@ -3470,9 +3501,403 @@ function formatTaskLinks(linksText) {
   
   if (links.length === 0) return '';
   
-  return links.map((link, index) => {
-    // Tạo thẻ a với target="_blank" để mở trong tab mới
-    return `<a href="${link}" target="_blank" class="text-blue-600 hover:underline">Link ${index + 1}</a>`;
-  }).join(' | ');
+  // Tạo HTML cho các link
+  return links.map(link => {
+    const url = link.trim();
+    if (!url) return '';
+    
+    // Xác định loại link và icon
+    let icon = 'fas fa-link';
+    let domain = '';
+    
+    try {
+      const urlObj = new URL(url);
+      domain = urlObj.hostname;
+      
+      if (domain.includes('drive.google.com')) icon = 'fab fa-google-drive';
+      else if (domain.includes('docs.google.com')) icon = 'fas fa-file-alt';
+      else if (domain.includes('sheets.google.com')) icon = 'fas fa-table';
+      else if (domain.includes('github.com')) icon = 'fab fa-github';
+      else if (domain.includes('figma.com')) icon = 'fab fa-figma';
+    } catch (e) {
+      domain = 'Invalid URL';
+    }
+    
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" 
+               class="result-link" title="${url}">
+              <i class="${icon}"></i> ${domain || 'Link'}
+            </a>`;
+  }).join('');
+}
+
+// === SMART SYNC SYSTEM ===
+
+// Initialize sync system
+function initializeSyncSystem() {
+  if (!isAuthenticated) return;
+  
+  console.log('🔄 Initializing Smart Sync System');
+  
+  // Start periodic sync intervals
+  startSyncIntervals();
+  
+  // Setup visibility change handler
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  
+  // Set initial sync time
+  lastSyncTime = new Date();
+  updateSyncIndicator();
+  
+  // Update sync indicator every minute
+  setInterval(updateSyncIndicator, 60000);
+}
+
+// Start sync intervals
+function startSyncIntervals() {
+  // Clear existing intervals
+  stopSyncIntervals();
+  
+  // Notification sync (more frequent)
+  syncIntervals.notifications = setInterval(() => {
+    if (!userIsInteracting && isAuthenticated) {
+      performNotificationSync();
+    }
+  }, SYNC_CONFIG.NOTIFICATION_INTERVAL);
+  
+  // Data sync (less frequent)
+  syncIntervals.data = setInterval(() => {
+    if (!userIsInteracting && isAuthenticated) {
+      performDataSync();
+    }
+  }, SYNC_CONFIG.DATA_INTERVAL);
+  
+  console.log('🔄 Sync intervals started');
+}
+
+// Stop sync intervals
+function stopSyncIntervals() {
+  if (syncIntervals.notifications) {
+    clearInterval(syncIntervals.notifications);
+    syncIntervals.notifications = null;
+  }
+  
+  if (syncIntervals.data) {
+    clearInterval(syncIntervals.data);
+    syncIntervals.data = null;
+  }
+  
+  console.log('🔄 Sync intervals stopped');
+}
+
+// Setup user interaction detection
+function setupUserInteractionDetection() {
+  const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+  
+  events.forEach(event => {
+    document.addEventListener(event, () => {
+      userIsInteracting = true;
+      
+      // Clear previous timeout
+      if (interactionTimeout) {
+        clearTimeout(interactionTimeout);
+      }
+      
+      // Set timeout to mark user as not interacting
+      interactionTimeout = setTimeout(() => {
+        userIsInteracting = false;
+      }, SYNC_CONFIG.USER_INTERACTION_DELAY);
+    });
+  });
+}
+
+// Handle visibility change (when user switches tabs)
+function handleVisibilityChange() {
+  if (!document.hidden && isAuthenticated) {
+    // User came back to tab, perform immediate sync
+    console.log('🔄 User returned, performing immediate sync');
+    performImmediateSync();
+  }
+}
+
+// Manual sync triggered by user
+function handleManualSync() {
+  if (isSyncing) return;
+  
+  console.log('🔄 Manual sync triggered');
+  performImmediateSync(true); // Pass true for manual sync
+}
+
+// Perform immediate sync
+async function performImmediateSync(isManual = false) {
+  if (isSyncing) return;
+  
+  setSyncingState(true, isManual);
+  
+  try {
+    await Promise.all([
+      performNotificationSync(),
+      performDataSync()
+    ]);
+    
+    // Removed success toast - too distracting
+    // showSyncToast('Dữ liệu đã được đồng bộ', 'success');
+  } catch (error) {
+    console.error('Sync error:', error);
+    showSyncToast('Lỗi khi đồng bộ dữ liệu', 'error');
+  } finally {
+    setSyncingState(false, isManual);
+  }
+}
+
+// Perform notification sync
+async function performNotificationSync() {
+  try {
+    console.log('🔔 Syncing notifications...');
+    
+    // Set subtle visual indicator for auto sync
+    const syncIcon = document.getElementById('sync-icon');
+    if (syncIcon) syncIcon.style.color = '#9CA3AF'; // gray-400
+    
+    const response = await new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .getNotifications();
+    });
+    
+    if (response && response.length !== undefined) {
+      const currentCount = allNotifications ? allNotifications.length : 0;
+      const newCount = response.length;
+      
+      // Removed notification toast - too distracting
+      // if (newCount > currentCount) {
+      //   const newNotifications = newCount - currentCount;
+      //   showSyncToast(`${newNotifications} thông báo mới`, 'info');
+      // }
+      
+      // Update global notifications data
+      allNotifications = response;
+      
+      // Only re-render if user is not viewing notifications
+      if (currentSection !== 'notifications' && !isNotificationPanelOpen()) {
+        renderNotifications(response);
+      }
+      
+      updateNotificationBadge();
+    }
+    
+    // Reset icon color
+    if (syncIcon) syncIcon.style.color = '';
+  } catch (error) {
+    console.error('Notification sync error:', error);
+    // Reset icon color on error
+    const syncIcon = document.getElementById('sync-icon');
+    if (syncIcon) syncIcon.style.color = '';
+  }
+}
+
+// Perform data sync
+async function performDataSync() {
+  try {
+    console.log('📊 Syncing data...');
+    
+    // Set subtle visual indicator for auto sync
+    const syncIcon = document.getElementById('sync-icon');
+    if (syncIcon) syncIcon.style.color = '#9CA3AF'; // gray-400
+    
+    const response = await new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .getInitialData();
+    });
+    
+    if (response && !response.error) {
+      // Compare and update data
+      const hasChanges = compareAndUpdateData(response);
+      
+      if (hasChanges) {
+        // Update UI elements that don't disrupt user
+        updateBackgroundElements();
+      }
+      
+      lastSyncTime = new Date();
+      updateSyncIndicator();
+    }
+    
+    // Reset icon color
+    if (syncIcon) syncIcon.style.color = '';
+  } catch (error) {
+    console.error('Data sync error:', error);
+    // Reset icon color on error
+    const syncIcon = document.getElementById('sync-icon');
+    if (syncIcon) syncIcon.style.color = '';
+  }
+}
+
+// Compare and update data
+function compareAndUpdateData(newData) {
+  let hasChanges = false;
+  
+  // Compare projects
+  if (JSON.stringify(allProjects) !== JSON.stringify(newData.projects || [])) {
+    allProjects = newData.projects || [];
+    hasChanges = true;
+  }
+  
+  // Compare tasks
+  if (JSON.stringify(allTasks) !== JSON.stringify(newData.tasks || [])) {
+    allTasks = newData.tasks || [];
+    hasChanges = true;
+  }
+  
+  // Compare staff
+  if (JSON.stringify(allStaff) !== JSON.stringify(newData.staff || [])) {
+    allStaff = newData.staff || [];
+    hasChanges = true;
+  }
+  
+  return hasChanges;
+}
+
+// Update background elements that don't disrupt user
+function updateBackgroundElements() {
+  // Always safe to update these
+  const statsData = calculateStats();
+  renderStats(statsData);
+  
+  // Update charts (they animate smoothly)
+  renderChart();
+  renderProjectProgressChart();
+  renderStaffPerformanceChart();
+  
+  // Update sections only if user is not viewing them
+  if (currentSection !== 'projects') {
+    renderProjects();
+  }
+  
+  if (currentSection !== 'tasks') {
+    renderTasks();
+  }
+  
+  if (currentSection !== 'staff') {
+    renderStaff();
+  }
+  
+  if (currentSection !== 'gantt') {
+    // Gantt chart can be updated as it doesn't disrupt scrolling
+    renderGanttChart();
+  }
+  
+  // Always safe to update these background elements
+  renderProjectTaskTree();
+  renderPriorityTasks();
+  populateDropdowns();
+}
+
+// Set syncing state
+function setSyncingState(syncing, isManual = false) {
+  isSyncing = syncing;
+  const syncBtn = document.getElementById('sync-btn');
+  const syncIcon = document.getElementById('sync-icon');
+  
+  if (syncBtn) {
+    if (syncing) {
+      if (isManual) {
+        // Manual sync - show spinning animation
+        syncBtn.classList.add('syncing');
+        syncBtn.title = 'Đang đồng bộ...';
+      } else {
+        // Auto sync - just change color to gray (subtle)
+        syncIcon.style.color = '#9CA3AF'; // gray-400
+        syncBtn.title = 'Đang đồng bộ ngầm...';
+      }
+    } else {
+      // Reset to normal state
+      syncBtn.classList.remove('syncing');
+      syncIcon.style.color = ''; // Reset to default color
+      syncBtn.title = 'Đồng bộ dữ liệu';
+    }
+  }
+}
+
+// Update sync indicator
+function updateSyncIndicator() {
+  const syncBtn = document.getElementById('sync-btn');
+  
+  if (syncBtn && lastSyncTime) {
+    const now = new Date();
+    const diffMinutes = Math.floor((now - lastSyncTime) / 60000);
+    
+    // Update tooltip with last sync time
+    const timeText = diffMinutes < 1 ? 'vừa xong' : `${diffMinutes} phút trước`;
+    syncBtn.title = `Đồng bộ lần cuối: ${timeText}`;
+  }
+}
+
+// Check if notification panel is open
+function isNotificationPanelOpen() {
+  // This depends on your notification panel implementation
+  // For Alpine.js, you might check the x-data state
+  return false; // Placeholder - implement based on your notification panel
+}
+
+// Show sync toast notification
+function showSyncToast(message, type = 'info') {
+  // Remove any existing sync toast
+  const existingToast = document.querySelector('.sync-toast');
+  if (existingToast) {
+    existingToast.remove();
+  }
+  
+  const toast = document.createElement('div');
+  toast.className = `sync-toast ${type}`;
+  
+  const iconClass = type === 'success' ? 'fas fa-check-circle text-green-500' :
+                   type === 'error' ? 'fas fa-exclamation-circle text-red-500' :
+                   'fas fa-info-circle text-blue-500';
+  
+  toast.innerHTML = `
+    <i class="${iconClass}"></i>
+    <span>${message}</span>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  // Trigger animation
+  setTimeout(() => toast.classList.add('show'), 100);
+  
+  // Remove after 3 seconds
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// Start sync system when user logs in
+function startSyncSystemForUser() {
+  if (isAuthenticated) {
+    initializeSyncSystem();
+  }
+}
+
+// Stop sync system when user logs out
+function stopSyncSystemForUser() {
+  stopSyncIntervals();
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+  console.log('🔄 Sync system stopped');
+}
+
+// Calculate stats (helper function)
+function calculateStats() {
+  // Implement your stats calculation logic here
+  // This should return the same format as your current stats
+  return {
+    totalProjects: allProjects.length,
+    completedProjects: allProjects.filter(p => (p[COL.P_STATUS] || '').toLowerCase().includes('hoàn thành')).length,
+    totalTasks: allTasks.length,
+    completedTasks: allTasks.filter(t => (t[COL.T_STATUS] || '').toLowerCase().includes('hoàn thành')).length,
+    // Add other stats as needed
+  };
 }
 </script>
