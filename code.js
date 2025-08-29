@@ -2180,3 +2180,33 @@ function addNotification(notificationData) {
     lock.releaseLock();
   }
 }
+
+function clearActivityLog() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const activitySheet = getOrCreateSheet(ss, ACTIVITY_SHEET_NAME, [
+      ACTIVITY_ID_COLUMN_NAME, ACTIVITY_TIMESTAMP_COLUMN_NAME,
+      ACTIVITY_ACTION_COLUMN_NAME, ACTIVITY_DETAILS_COLUMN_NAME,
+      ACTIVITY_USER_COLUMN_NAME
+    ]);
+    
+    const data = activitySheet.getDataRange().getValues();
+    const headers = data[0];
+    
+    if (data.length <= 1) {
+      return { success: true, deletedCount: 0 };
+    }
+    
+    const deletedCount = data.length - 1;
+    
+    // Clear all data except headers
+    activitySheet.clear();
+    activitySheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    
+    logActivity("Xóa log hoạt động", `Đã xóa ${deletedCount} hoạt động`);
+    
+    return { success: true, deletedCount: deletedCount };
+  } catch (e) {
+    return { success: false, error: `Lỗi khi xóa hoạt động: ${e.message}` };
+  }
+}

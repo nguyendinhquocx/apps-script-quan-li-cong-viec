@@ -304,7 +304,8 @@ function hideAdminButtons() {
   // Hide admin-only buttons 
   const adminButtons = [
     'add-staff-btn',
-    'quick-add-staff'
+    'quick-add-staff',
+    'clear-activity-btn'
   ];
   
   adminButtons.forEach(buttonId => {
@@ -369,7 +370,8 @@ function showAdminButtons() {
     'add-staff-btn',
     'quick-add-project',
     'quick-add-task',
-    'quick-add-staff'
+    'quick-add-staff',
+    'clear-activity-btn'
   ];
   
   adminButtons.forEach(buttonId => {
@@ -629,6 +631,9 @@ function setupEventListeners() {
     document.getElementById('notification-btn')?.addEventListener('click', toggleNotifications);
     document.getElementById('clear-notifications')?.addEventListener('click', clearNotifications);
 
+    // Clear activity button (admin only)
+    document.getElementById('clear-activity-btn')?.addEventListener('click', clearActivity);
+
     // Sync button
     document.getElementById('sync-btn')?.addEventListener('click', handleManualSync);
 
@@ -643,6 +648,25 @@ function setupEventListeners() {
             const btn = e.target.matches('.edit-btn') ? e.target : e.target.closest('.edit-btn');
             const type = btn.dataset.type;
             const id = btn.dataset.id;
+            
+            // Check permissions
+            if (canUserEditResource(type, id)) {
+                openEditModal(type, id);
+            } else {
+                showToast('Bạn không có quyền chỉnh sửa mục này', 'error');
+            }
+        }
+        
+        // Task card click handler - open edit modal
+        if (e.target.matches('.task-card-clickable') || e.target.closest('.task-card-clickable')) {
+            // Don't trigger if clicking on buttons
+            if (e.target.matches('.action-btn') || e.target.closest('.action-btn')) {
+                return;
+            }
+            
+            const card = e.target.matches('.task-card-clickable') ? e.target : e.target.closest('.task-card-clickable');
+            const type = card.dataset.type;
+            const id = card.dataset.id;
             
             // Check permissions
             if (canUserEditResource(type, id)) {
@@ -1037,39 +1061,67 @@ function toggleSidebar() {
 function renderStats(stats) {
     if (!stats) return;
     
-    // Tính toán dữ liệu cho projects
-    const totalProjects = stats.totalProjects || 0;
-    const completedProjects = allProjects.filter(project => {
+    // Get user-specific data based on permissions
+    let userProjects = [];
+    let userTasks = [];
+    
+    if (isAdmin()) {
+        // Admin sees all data
+        userProjects = allProjects;
+        userTasks = allTasks;
+    } else {
+        // Manager/Staff sees only their allowed projects and tasks
+        userProjects = getUserAllowedProjects();
+        const userProjectIds = userProjects.map(p => p[COL.P_ID]);
+        userTasks = allTasks.filter(task => {
+            const projectId = task[COL.T_PROJECT_ID];
+            const assignee = task[COL.T_ASSIGNEE];
+            return userProjectIds.includes(projectId) || assignee === currentUser.name;
+        });
+    }
+    
+    // Tính toán dữ liệu cho projects (user-specific)
+    const totalProjects = userProjects.length;
+    const completedProjects = userProjects.filter(project => {
         const status = (project[COL.P_STATUS] || '').toLowerCase();
         return status.includes('hoàn thành');
     }).length;
     const projectCompletionRate = totalProjects > 0 ? Math.round((completedProjects / totalProjects) * 100) : 0;
     
-    // Tính toán dữ liệu cho tasks
-    const totalTasks = stats.totalTasks || 0;
-    const completedTasks = stats.completedTasks || 0;
+    // Tính toán dữ liệu cho tasks (user-specific)
+    const totalTasks = userTasks.length;
+    const completedTasks = userTasks.filter(task => {
+        const status = (task[COL.T_STATUS] || '').toLowerCase();
+        return status.includes('hoàn thành');
+    }).length;
     const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
     
-    // Tính toán dự án đang làm
-    const pendingTasks = allTasks.filter(task => {
+    // Tính toán dự án đang làm (user-specific)
+    const pendingTasks = userTasks.filter(task => {
         const status = (task[COL.T_STATUS] || '').toLowerCase();
         return status.includes('chưa bắt đầu');
     }).length;
 
-    const ongoingTasks = allTasks.filter(task => {
+    const ongoingTasks = userTasks.filter(task => {
         const status = (task[COL.T_STATUS] || '').toLowerCase();
         return status.includes('đang');
     }).length;
 
-    const pausedTasks = allTasks.filter(task => {
+    const pausedTasks = userTasks.filter(task => {
         const status = (task[COL.T_STATUS] || '').toLowerCase();
         return status.includes('tạm dừng');
     }).length;
 
     const activeTasks = ongoingTasks + pendingTasks + pausedTasks;
     
-    // Tính toán nhiệm vụ quá hạn
-    const overdueTasks = stats.overdueTasks || 0;
+    // Tính toán nhiệm vụ quá hạn (user-specific)
+    const overdueTasks = userTasks.filter(task => {
+        const deadline = task[COL.T_DEADLINE];
+        if (!deadline) return false;
+        const status = (task[COL.T_STATUS] || '').toLowerCase();
+        if (status.includes('hoàn thành')) return false;
+        return new Date(deadline) < new Date();
+    }).length;
     const overdueRate = totalTasks > 0 ? Math.round((overdueTasks / totalTasks) * 100) : 0;
     
     // Cập nhật DOM
@@ -1217,7 +1269,7 @@ function createCompactTaskItem(task) {
     const priorityClass = getPriorityClass(taskPriority);
     
     return `
-        <div class="task-tree-item task-connection" data-id="${taskId}">
+        <div class="task-tree-item task-connection task-card-clickable" data-id="${taskId}" data-type="task">
             <div class="task-info">
                 <div class="task-details">
                     <h5 class="task-title">${taskName}</h5>
@@ -1245,13 +1297,10 @@ function createCompactTaskItem(task) {
                     <div class="task-progress">
                         <span class="task-progress-text">${taskCompletion}%</span>
                         <div class="task-progress-bar">
-                            <div class="task-progress-fill" style="width: ${taskCompletion}%"></div>
+                            <div class="task-progress-fill ${taskCompletion === 100 ? 'completed' : ''}" style="width: ${taskCompletion}%"></div>
                         </div>
                     </div>
                     <div class="flex space-x-1">
-                        <button class="action-btn action-btn-edit edit-btn" data-type="task" data-id="${taskId}" title="Chỉnh sửa">
-                                 Sửa
-                             </button>
                              <button class="action-btn action-btn-delete delete-btn" data-type="task" data-id="${taskId}" data-name="${taskName}" title="Xóa">
                                  Xóa
                              </button>
@@ -1746,7 +1795,15 @@ function renderProjectProgressChart() {
         projectProgressChart.destroy();
     }
     
-    if (!allProjects || allProjects.length === 0) {
+    // Get user-specific projects based on permissions
+    let userProjects = [];
+    if (isAdmin()) {
+        userProjects = allProjects;
+    } else {
+        userProjects = getUserAllowedProjects();
+    }
+    
+    if (!userProjects || userProjects.length === 0) {
         message.textContent = 'Không có dữ liệu dự án';
         message.classList.remove('hidden');
         return;
@@ -1763,8 +1820,8 @@ function renderProjectProgressChart() {
         '100%': { count: 0, projects: [] }
     };
     
-    // Group projects by progress ranges
-    allProjects.forEach(project => {
+    // Group projects by progress ranges (user-specific)
+    userProjects.forEach(project => {
         const projectTasks = allTasks.filter(task => task[COL.T_PID] === project[COL.P_ID]);
         const completedTasks = projectTasks.filter(task => (task[COL.T_STATUS] || '').toLowerCase().includes('hoàn thành')).length;
         const totalTasks = projectTasks.length;
@@ -1902,8 +1959,31 @@ function renderStaffPerformanceChart() {
     if (staffPerformanceChart) {
         staffPerformanceChart.destroy();
     }
+
+    // Get user-specific data based on permissions
+    let relevantTasks = [];
+    let relevantStaff = [];
     
-    if (!allStaff || allStaff.length === 0 || !allTasks || allTasks.length === 0) {
+    if (isAdmin()) {
+        // Admin sees all data
+        relevantTasks = allTasks;
+        relevantStaff = allStaff;
+    } else if (isManager()) {
+        // Manager sees staff in their managed projects
+        const managedProjects = getUserAllowedProjects();
+        const managedProjectIds = managedProjects.map(p => p[COL.P_ID]);
+        relevantTasks = allTasks.filter(task => managedProjectIds.includes(task[COL.T_PROJECT_ID]));
+        
+        // Get unique staff from relevant tasks
+        const staffNames = [...new Set(relevantTasks.map(task => task[COL.T_ASSIGNEE]).filter(name => name))];
+        relevantStaff = allStaff.filter(staff => staffNames.includes(staff[COL.S_NAME]));
+    } else {
+        // Staff only sees their own performance
+        relevantTasks = allTasks.filter(task => task[COL.T_ASSIGNEE] === currentUser.name);
+        relevantStaff = allStaff.filter(staff => staff[COL.S_NAME] === currentUser.name);
+    }
+    
+    if (!relevantStaff || relevantStaff.length === 0 || !relevantTasks || relevantTasks.length === 0) {
         message.textContent = 'Không có dữ liệu nhân viên hoặc nhiệm vụ';
         message.classList.remove('hidden');
         return;
@@ -1911,10 +1991,10 @@ function renderStaffPerformanceChart() {
     
     message.classList.add('hidden');
     
-    // Calculate staff performance
-    const staffPerformance = allStaff.map(staff => {
+    // Calculate staff performance (user-specific)
+    const staffPerformance = relevantStaff.map(staff => {
         const staffName = staff[COL.S_NAME] || 'Không tên';
-        const assignedTasks = allTasks.filter(task => task[COL.T_ASSIGNEE] === staffName);
+        const assignedTasks = relevantTasks.filter(task => task[COL.T_ASSIGNEE] === staffName);
         const completedTasks = assignedTasks.filter(task => (task[COL.T_STATUS] || '').toLowerCase().includes('hoàn thành'));
         const completionRate = assignedTasks.length > 0 ? Math.round((completedTasks.length / assignedTasks.length) * 100) : 0;
         
@@ -2932,6 +3012,45 @@ function clearNotifications() {
                 showToast('Lỗi: ' + error.message, 'error');
             })
             .clearReadNotifications();
+    }
+}
+
+function clearActivity() {
+    if (!isAdmin()) {
+        showToast('Chỉ admin mới có thể xóa hoạt động', 'error');
+        return;
+    }
+    
+    if (confirm('Xóa tất cả hoạt động gần đây? Hành động này không thể hoàn tác.')) {
+        const clearBtn = document.getElementById('clear-activity-btn');
+        if (clearBtn) {
+            clearBtn.textContent = 'Đang xóa...';
+            clearBtn.disabled = true;
+        }
+        
+        google.script.run
+            .withSuccessHandler(function(response) {
+                if (clearBtn) {
+                    clearBtn.textContent = 'Clear';
+                    clearBtn.disabled = false;
+                }
+                
+                if (response.success) {
+                    showToast(`Đã xóa ${response.deletedCount || 0} hoạt động`, 'success');
+                    // Refresh activity log
+                    document.getElementById('recent-activity').innerHTML = '<div class="text-center text-gray-500 text-sm py-4">Không có hoạt động nào</div>';
+                } else {
+                    showToast(response.error || 'Lỗi xóa hoạt động', 'error');
+                }
+            })
+            .withFailureHandler(function(error) {
+                if (clearBtn) {
+                    clearBtn.textContent = 'Clear';
+                    clearBtn.disabled = false;
+                }
+                showToast('Lỗi: ' + error.message, 'error');
+            })
+            .clearActivityLog();
     }
 }
 

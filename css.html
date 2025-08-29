@@ -773,6 +773,22 @@ aside {
   transition: width 0.8s ease;
 }
 
+.task-progress-fill.completed {
+  background: linear-gradient(90deg, #10b981, #059669);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+.task-card-clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.task-card-clickable:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+  border-left: 3px solid #3b82f6;
+  transform: translateX(2px);
+}
+
 /* Project Card */
 .project-card {
   background: var(--glass-bg);
