@@ -1460,7 +1460,7 @@ function renderProjects() {
     
     const projects = groupedProjects[status] || [];
     if (projects.length === 0) {
-      container.innerHTML = '<div class="text-gray-500 text-center py-8">Không có dự án nào</div>';
+      container.innerHTML = '';
     } else {
       container.innerHTML = projects.map(project => createProjectCard(project, true)).join('');
     }
@@ -1482,7 +1482,7 @@ function createProjectCard(project, isDetailed = false) {
         <div class="project-card clickable-project-card cursor-pointer" data-id="${projectId}">
             <div class="flex items-start justify-between mb-4">
                 <div class="flex-1">
-                    <h4 class="font-semibold text-gray-900 text-lg mb-1">${projectName}</h4>
+                    <h4 class="font-semibold text-gray-900 mb-1">${projectName}</h4>
                     ${projectDesc ? `<p class="text-sm text-gray-600 mb-2">${projectDesc}</p>` : ''}
                     <span class="status-badge ${statusClass}">${projectStatus}</span>
                 </div>
@@ -1548,46 +1548,52 @@ function renderTasks() {
     return;
   }
   
-  // Group tasks by project
-  const tasksByProject = {};
+  // Group tasks by status
+  const tasksByStatus = {
+    'Chờ xử lý': [],
+    'Đang thực hiện': [],
+    'Hoàn thành': []
+  };
   
   userTasks.forEach(task => {
-    const projectId = task[COL.T_PID];
-    const project = allProjects.find(p => p[COL.P_ID] === projectId);
-    const projectName = project ? project[COL.P_NAME] : 'Dự án không xác định';
-    
-    if (!tasksByProject[projectName]) {
-      tasksByProject[projectName] = [];
+    const status = task[COL.T_STATUS] || 'Chờ xử lý';
+    if (tasksByStatus[status]) {
+      tasksByStatus[status].push(task);
     }
-    tasksByProject[projectName].push(task);
   });
   
-  // Sort tasks within each project by status priority: Chờ xử lý -> Đang thực hiện -> Hoàn thành
-  const statusOrder = { 'Chờ xử lý': 1, 'Đang thực hiện': 2, 'Hoàn thành': 3 };
-  
-  Object.keys(tasksByProject).forEach(projectName => {
-    tasksByProject[projectName].sort((a, b) => {
-      const statusA = a[COL.T_STATUS] || 'Chờ xử lý';
-      const statusB = b[COL.T_STATUS] || 'Chờ xử lý';
-      return (statusOrder[statusA] || 1) - (statusOrder[statusB] || 1);
+  // Sort tasks within each status group by project name for better organization
+  Object.keys(tasksByStatus).forEach(status => {
+    tasksByStatus[status].sort((a, b) => {
+      const projectA = allProjects.find(p => p[COL.P_ID] === a[COL.T_PID]);
+      const projectB = allProjects.find(p => p[COL.P_ID] === b[COL.T_PID]);
+      const nameA = projectA ? projectA[COL.P_NAME] : '';
+      const nameB = projectB ? projectB[COL.P_NAME] : '';
+      return nameA.localeCompare(nameB);
     });
   });
   
-  // Render grouped tasks
+  // Render grouped tasks by status
   let html = '';
-  Object.keys(tasksByProject).forEach(projectName => {
-    const tasks = tasksByProject[projectName];
-    html += `
-      <div class="mb-8">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">${projectName}</h3>
-        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          ${tasks.map(task => createTaskCard(task, true)).join('')}
+  Object.keys(tasksByStatus).forEach(status => {
+    const tasks = tasksByStatus[status];
+    if (tasks.length > 0) {
+      html += `
+        <div class="mb-8">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">${status}</h3>
+          <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            ${tasks.map(task => createTaskCard(task, true)).join('')}
+          </div>
         </div>
-      </div>
-    `;
+      `;
+    }
   });
   
-  container.innerHTML = html;
+  if (html === '') {
+    container.innerHTML = '<div class="loading-card">Chưa có nhiệm vụ nào</div>';
+  } else {
+    container.innerHTML = html;
+  }
 }
 
 function createTaskCard(task, isDetailed = false) {
