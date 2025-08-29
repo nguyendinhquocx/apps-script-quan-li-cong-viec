@@ -989,6 +989,9 @@ function canUserDeleteResource(type, id) {
 
 // === Navigation ===
 function switchSection(sectionName) {
+  // Cleanup any active sortable instances when switching sections
+  destroyAllSortableInstances();
+  
   // Update active nav link
   document.querySelectorAll('.nav-link').forEach(link => {
     link.classList.remove('active');
@@ -1424,6 +1427,17 @@ function createPriorityTaskCard(task) {
 }
 
 function renderProjects() {
+  // Check current view mode and render accordingly
+  if (currentProjectView === 'kanban') {
+    renderProjectsKanban();
+    return;
+  }
+  
+  // Call list view rendering
+  renderProjectsList();
+}
+
+function renderProjectsList() {
   // Chỉ lấy các dự án mà người dùng có quyền xem
   const userProjects = getUserAllowedProjects();
   
@@ -4411,7 +4425,9 @@ function calculateStats() {
 
 // === KANBAN VIEW MANAGEMENT ===
 let currentTaskView = 'kanban'; // Default to 'kanban' instead of 'list'
+let currentProjectView = 'kanban'; // Default to 'kanban' for projects
 let sortableInstances = []; // Store Sortable instances
+let projectSortableInstances = []; // Store Project Sortable instances
 
 function toggleTaskView(view) {
   if (currentTaskView === view) return;
@@ -4440,6 +4456,36 @@ function toggleTaskView(view) {
     listView.classList.add('hidden-view');
     kanbanView.classList.remove('hidden-view');
     renderTasksKanban();
+  }
+}
+
+function toggleProjectView(view) {
+  if (currentProjectView === view) return;
+  
+  currentProjectView = view;
+  
+  // Update toggle buttons
+  document.querySelectorAll('#projects-section .view-toggle .btn').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.dataset.view === view) {
+      btn.classList.add('active');
+    }
+  });
+  
+  // Show/hide views
+  const listView = document.getElementById('projects-list-view');
+  const kanbanView = document.getElementById('projects-kanban-view');
+  
+  if (view === 'list') {
+    listView.classList.remove('hidden-view');
+    kanbanView.classList.add('hidden-view');
+    destroyProjectSortableInstances();
+    // Force render list view with current data
+    renderProjectsList();
+  } else {
+    listView.classList.add('hidden-view');
+    kanbanView.classList.remove('hidden-view');
+    renderProjectsKanban();
   }
 }
 
@@ -4590,6 +4636,14 @@ function destroySortableInstances() {
   sortableInstances = [];
 }
 
+function destroyAllSortableInstances() {
+  // Destroy task sortable instances
+  destroySortableInstances();
+  
+  // Destroy project sortable instances
+  destroyProjectSortableInstances();
+}
+
 function handleTaskDragEnd(evt) {
   const taskId = evt.item.dataset.id;
   const newStatus = evt.to.dataset.status;
@@ -4679,4 +4733,219 @@ function updateKanbanHeaders() {
     }
   });
 }
+
+// === PROJECTS KANBAN FUNCTIONS ===
+function renderProjectsKanban() {
+  const kanbanBoard = document.querySelector('#projects-kanban-view .kanban-board');
+  if (!kanbanBoard) return;
+  
+  // Get user projects (same logic as list view)
+  const userProjects = getUserAllowedProjects();
+  
+  if (!userProjects || userProjects.length === 0) {
+    kanbanBoard.innerHTML = `
+      <div class="col-span-full text-center py-12 text-gray-500">
+        <i class="fas fa-folder-open text-4xl mb-4"></i>
+        <p>Chưa có dự án nào</p>
+      </div>
+    `;
+    return;
+  }
+  
+  // Define project status columns
+  const statusColumns = [
+    { key: 'Chưa bắt đầu', label: 'Chưa bắt đầu', color: 'bg-gray-50' },
+    { key: 'Đang thực hiện', label: 'Đang thực hiện', color: 'bg-blue-50' },
+    { key: 'Hoàn thành', label: 'Hoàn thành', color: 'bg-green-50' }
+  ];
+  
+  // Group projects by status
+  const projectsByStatus = {};
+  statusColumns.forEach(col => {
+    projectsByStatus[col.key] = userProjects.filter(project => 
+      (project[COL.P_STATUS] || 'Chưa bắt đầu') === col.key
+    );
+  });
+  
+  // Generate Kanban columns
+  const columnsHtml = statusColumns.map(column => {
+    const projects = projectsByStatus[column.key] || [];
+    
+    return `
+      <div class="kanban-column ${column.color}" data-status="${column.key}">
+        <h3 class="kanban-header">
+          ${column.label} <span class="kanban-count">(${projects.length})</span>
+        </h3>
+        <div class="kanban-list" data-status="${column.key}">
+          ${projects.length > 0 
+            ? projects.map(project => createKanbanProjectCard(project)).join('')
+            : '<div class="kanban-empty-state">Chưa có dự án nào</div>'
+          }
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  kanbanBoard.innerHTML = columnsHtml;
+  
+  // Initialize drag and drop
+  initializeProjectSortable();
+}
+
+function createKanbanProjectCard(project) {
+  const projectId = project[COL.P_ID] || 'N/A';
+  const projectName = project[COL.P_NAME] || 'Chưa có tên';
+  const projectDesc = project[COL.P_DESC] || '';
+  const projectManager = project[COL.P_MANAGER] || 'Chưa gán';
+  const startDate = formatDateForDisplay(project[COL.P_START]);
+  const endDate = formatDateForDisplay(project[COL.P_END]);
+  
+  const publicBadge = isPublicProject(project) ? `<span class="kanban-badge bg-blue-100 text-blue-800">🌐 Chung</span>` : '';
+  
+  return `
+    <div class="kanban-card clickable-project-card cursor-pointer" data-id="${projectId}">
+      <div class="kanban-card-header">
+        <h4 class="kanban-card-title">${projectName}</h4>
+        <div class="kanban-card-actions">
+          <button class="kanban-action-btn edit-btn" data-type="project" data-id="${projectId}" title="Chỉnh sửa">
+            Sửa
+          </button>
+          <button class="kanban-action-btn delete-btn" data-type="project" data-id="${projectId}" data-name="${projectName}" title="Xóa">
+            Xóa
+          </button>
+        </div>
+      </div>
+      
+      ${projectDesc ? `<p class="kanban-card-desc">${projectDesc}</p>` : ''}
+      
+      <div class="kanban-card-meta">
+        <div class="kanban-card-info">
+          <span class="kanban-meta-item">👤 ${projectManager}</span>
+          ${startDate ? `<span class="kanban-meta-item">📅 ${startDate}</span>` : ''}
+        </div>
+        ${publicBadge}
+      </div>
+    </div>
+  `;
+}
+
+function initializeProjectSortable() {
+  // Destroy existing instances
+  destroyProjectSortableInstances();
+  
+  // Initialize Sortable for each column
+  const columns = document.querySelectorAll('#projects-kanban-view .kanban-list');
+  columns.forEach(column => {
+    const sortable = new Sortable(column, {
+      group: 'projects-kanban',
+      animation: 150,
+      chosenClass: 'kanban-card-chosen',
+      dragClass: 'kanban-card-drag',
+      ghostClass: 'kanban-card-ghost',
+      onEnd: handleProjectDragEnd,
+      // Enable touch support
+      forceFallback: false,
+      fallbackTolerance: 0,
+      touchStartThreshold: 5,
+      delayOnTouchStart: true,
+      delay: 100
+    });
+    
+    projectSortableInstances.push(sortable);
+  });
+}
+
+function destroyProjectSortableInstances() {
+  projectSortableInstances.forEach(instance => {
+    if (instance && typeof instance.destroy === 'function') {
+      instance.destroy();
+    }
+  });
+  projectSortableInstances = [];
+}
+
+function handleProjectDragEnd(evt) {
+  const projectId = evt.item.dataset.id;
+  const newStatus = evt.to.dataset.status;
+  const oldStatus = evt.from.dataset.status;
+  
+  if (newStatus === oldStatus) {
+    console.log('Project moved within same column');
+    return;
+  }
+  
+  console.log(`Project ${projectId} moved from ${oldStatus} to ${newStatus}`);
+  
+  // Update project status optimistically
+  const project = allProjects.find(p => p[COL.P_ID] === projectId);
+  if (project) {
+    const oldProjectStatus = project[COL.P_STATUS];
+    project[COL.P_STATUS] = newStatus;
+    
+    // Update column headers
+    updateProjectKanbanHeaders();
+    
+    // Show loading state
+    showToast('Đang cập nhật trạng thái...', 'info');
+    
+    // Prepare update data with required fields
+    const updateData = {
+      name: project[COL.P_NAME], // Required field
+      description: project[COL.P_DESC] || '',
+      manager: project[COL.P_MANAGER] || '',
+      status: newStatus,
+      startDate: project[COL.P_START] || '',
+      endDate: project[COL.P_END] || '',
+      isPublic: project[COL.P_IS_PUBLIC] || false
+    };
+    
+    // Sync to backend
+    google.script.run
+      .withSuccessHandler(function(response) {
+        if (response.success) {
+          showToast('Cập nhật trạng thái thành công!', 'success');
+          // Refresh data to ensure consistency
+          refreshData();
+        } else {
+          // Revert changes on error
+          project[COL.P_STATUS] = oldProjectStatus;
+          showToast(response.error || 'Có lỗi xảy ra khi cập nhật', 'error');
+          renderProjectsKanban(); // Re-render to show reverted state
+        }
+      })
+      .withFailureHandler(function(error) {
+        // Revert changes on error
+        project[COL.P_STATUS] = oldProjectStatus;
+        showToast('Lỗi: ' + error.message, 'error');
+        renderProjectsKanban(); // Re-render to show reverted state
+      })
+      .updateProjectWithAuth(projectId, updateData);
+  }
+}
+
+function updateProjectKanbanHeaders() {
+  const userProjects = getUserAllowedProjects();
+  const projectsByStatus = {
+    'Chưa bắt đầu': [],
+    'Đang thực hiện': [],
+    'Hoàn thành': []
+  };
+  
+  // Count projects by status
+  userProjects.forEach(project => {
+    const status = project[COL.P_STATUS] || 'Chưa bắt đầu';
+    if (projectsByStatus[status]) {
+      projectsByStatus[status].push(project);
+    }
+  });
+  
+  // Update headers
+  Object.keys(projectsByStatus).forEach(status => {
+    const header = document.querySelector(`#projects-kanban-view [data-status="${status}"]`)?.parentElement.querySelector('h3');
+    if (header) {
+      header.textContent = `${status} (${projectsByStatus[status].length})`;
+    }
+  });
+}
+
 </script>
