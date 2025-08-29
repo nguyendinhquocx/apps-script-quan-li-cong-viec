@@ -146,13 +146,9 @@ function handleLogin(email, password) {
 
     setLoginLoading(true);
     
-    // Start loading data in parallel while authenticating
-    document.getElementById('login-loading').classList.remove('hidden');
-    
     google.script.run
         .withSuccessHandler(function(response) {
             setLoginLoading(false);
-            document.getElementById('login-loading').classList.add('hidden');
             
             if (response.success) {
                 hideLoginModal();
@@ -179,7 +175,6 @@ function handleLogin(email, password) {
         })
         .withFailureHandler(function(error) {
             setLoginLoading(false);
-            document.getElementById('login-loading').classList.add('hidden');
             showLoginError('Lỗi kết nối: ' + error.message);
         })
         .authenticateUser(email, password);
@@ -1551,7 +1546,47 @@ function renderStaff() {
         return;
     }
     
-    container.innerHTML = allStaff.map(staff => createStaffCard(staff)).join('');
+    // Nhóm staff theo phân quyền
+    const groupedStaff = {
+        'Admin': [],
+        'Quản lý': [],
+        'Nhân viên': []
+    };
+    
+    allStaff.forEach(staff => {
+        const role = staff[COL.S_ROLE] || 'Nhân viên';
+        if (groupedStaff[role]) {
+            groupedStaff[role].push(staff);
+        } else {
+            groupedStaff['Nhân viên'].push(staff);
+        }
+    });
+    
+    let html = '';
+    
+    // Render từng nhóm
+    Object.keys(groupedStaff).forEach(role => {
+        if (groupedStaff[role].length > 0) {
+            let roleClass = 'text-gray-800';
+            if (role === 'Admin') roleClass = 'text-red-600';
+            else if (role === 'Quản lý') roleClass = 'text-blue-600';
+            else if (role === 'Nhân viên') roleClass = 'text-green-600';
+            
+            html += `
+                <div class="col-span-full mb-4">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-sm font-medium ${roleClass}">${role}</span>
+                        <span class="text-sm text-gray-500">(${groupedStaff[role].length} người)</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        ${groupedStaff[role].map(staff => createStaffCard(staff)).join('')}
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    container.innerHTML = html;
 }
 
 function createStaffCard(staff) {
@@ -1595,10 +1630,6 @@ function createStaffCard(staff) {
               <div>
                   <span class="text-sm font-medium text-gray-700">Chức vụ:</span>
                   <span class="text-sm text-gray-900 ml-1">${staffPosition}</span>
-              </div>
-              <div>
-                  <span class="text-sm font-medium text-gray-700">Phân quyền:</span>
-                  <span class="user-role-badge ${roleClass} ml-1">${staffRole}</span>
               </div>
           </div>
       </div>
@@ -2484,7 +2515,7 @@ function createStaffModal(isEdit, data) {
                   
                   <div class="flex justify-end space-x-3 mt-6">
                       <button type="button" class="btn-secondary close-modal">Hủy</button>
-                      <button type="submit" class="btn-accent">${submitText}</button>
+                      <button type="submit" class="btn-primary">${submitText}</button>
                   </div>
               </form>
           </div>
