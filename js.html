@@ -4048,26 +4048,19 @@ function formatTaskLinks(linksText) {
     const url = link.trim();
     if (!url) return '';
     
-    // Xác định loại link và icon
-    let icon = 'fas fa-link';
+    // Xác định domain của link
     let domain = '';
     
     try {
       const urlObj = new URL(url);
       domain = urlObj.hostname;
-      
-      if (domain.includes('drive.google.com')) icon = 'fab fa-google-drive';
-      else if (domain.includes('docs.google.com')) icon = 'fas fa-file-alt';
-      else if (domain.includes('sheets.google.com')) icon = 'fas fa-table';
-      else if (domain.includes('github.com')) icon = 'fab fa-github';
-      else if (domain.includes('figma.com')) icon = 'fab fa-figma';
     } catch (e) {
       domain = 'Invalid URL';
     }
     
     return `<a href="${url}" target="_blank" rel="noopener noreferrer" 
                class="result-link" title="${url}">
-              <i class="${icon}"></i> ${domain || 'Link'}
+              ${domain || 'Link'}
             </a>`;
   }).join('');
 }
@@ -4745,7 +4738,6 @@ function renderProjectsKanban() {
   if (!userProjects || userProjects.length === 0) {
     kanbanBoard.innerHTML = `
       <div class="col-span-full text-center py-12 text-gray-500">
-        <i class="fas fa-folder-open text-4xl mb-4"></i>
         <p>Chưa có dự án nào</p>
       </div>
     `;
@@ -4800,7 +4792,7 @@ function createKanbanProjectCard(project) {
   const startDate = formatDateForDisplay(project[COL.P_START]);
   const endDate = formatDateForDisplay(project[COL.P_END]);
   
-  const publicBadge = isPublicProject(project) ? `<span class="kanban-badge bg-blue-100 text-blue-800">🌐 Chung</span>` : '';
+  const publicBadge = isPublicProject(project) ? `<span class="kanban-badge bg-blue-100 text-blue-800">Chung</span>` : '';
   
   return `
     <div class="kanban-card clickable-project-card cursor-pointer" data-id="${projectId}">
@@ -4820,10 +4812,11 @@ function createKanbanProjectCard(project) {
       
       <div class="kanban-card-meta">
         <div class="kanban-card-info">
-          <span class="kanban-meta-item">👤 ${projectManager}</span>
-          ${startDate ? `<span class="kanban-meta-item">📅 ${startDate}</span>` : ''}
+          <span class="kanban-meta-item">${projectManager}</span>
+          ${startDate ? `<span class="kanban-meta-item">${startDate}</span>` : ''}
         </div>
         ${publicBadge}
+      </div>
       </div>
     </div>
   `;
