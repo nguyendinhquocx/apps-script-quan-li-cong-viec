@@ -72,7 +72,7 @@ function doGet(e) {
       .setTitle('Quản Lý Dự Án')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-      .setFaviconUrl("https://static.vecteezy.com/system/resources/thumbnails/016/712/564/small_2x/3d-render-illustration-of-project-management-analysis-result-icon-png.png");
+      .setFaviconUrl("https://cdn-icons-png.flaticon.com/128/7046/7046053.png");
 }
 
 /**
