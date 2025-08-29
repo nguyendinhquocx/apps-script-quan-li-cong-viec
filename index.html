@@ -235,7 +235,7 @@
                 <div class="card-header">
                   <div class="main-stat">
                     <span class="stat-number" id="total-projects">-</span>
-                    <span class="stat-label">Tổng dự án</span>
+                    <span class="stat-label">Dự án</span>
                   </div>
                 </div>
                 <div class="card-details">
@@ -256,7 +256,7 @@
                 <div class="card-header">
                   <div class="main-stat">
                     <span class="stat-number" id="total-tasks">-</span>
-                    <span class="stat-label">Tổng nhiệm vụ</span>
+                    <span class="stat-label">Nhiệm vụ</span>
                   </div>
                 </div>
                 <div class="card-details">
@@ -412,8 +412,32 @@
             <i class="fas fa-plus text-black"></i>
           </button>
         </div>
-        <div id="projects-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div class="loading-card">Đang tải dự án...</div>
+        
+        <!-- Projects grouped by status -->
+        <div class="space-y-8">
+          <!-- Chưa bắt đầu Projects -->
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Chưa bắt đầu</h3>
+            <div id="projects-pending" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div class="loading-card">Đang tải dự án...</div>
+            </div>
+          </div>
+          
+          <!-- Đang thực hiện Projects -->
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Đang thực hiện</h3>
+            <div id="projects-active" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div class="loading-card">Đang tải dự án...</div>
+            </div>
+          </div>
+          
+          <!-- Hoàn thành Projects -->
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Hoàn thành</h3>
+            <div id="projects-completed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div class="loading-card">Đang tải dự án...</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -424,7 +448,9 @@
             <i class="fas fa-plus text-lg"></i>
           </button>
         </div>
-        <div id="tasks-grid" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        
+        <!-- Tasks grouped by project -->
+        <div id="tasks-by-project" class="space-y-8">
           <div class="loading-card">Đang tải nhiệm vụ...</div>
         </div>
       </div>

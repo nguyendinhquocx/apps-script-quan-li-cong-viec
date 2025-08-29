@@ -490,8 +490,10 @@ function showLoginError(message) {
 function clearAllSections() {
     // Clear all section content
     const sectionsToSelect = [
-        '#projects-grid',
-        '#tasks-grid', 
+        '#projects-pending',
+        '#projects-active', 
+        '#projects-completed',
+        '#tasks-by-project', 
         '#staff-grid',
         '#project-task-tree',
         '#priority-tasks',
@@ -1419,18 +1421,50 @@ function createPriorityTaskCard(task) {
 }
 
 function renderProjects() {
-  const container = document.getElementById('projects-grid');
-  if (!container) return;
-  
   // Chỉ lấy các dự án mà người dùng có quyền xem
   const userProjects = getUserAllowedProjects();
   
   if (!userProjects || userProjects.length === 0) {
-    container.innerHTML = '<div class="loading-card">Chưa có dự án nào</div>';
+    // Clear all containers
+    ['projects-pending', 'projects-active', 'projects-completed'].forEach(id => {
+      const container = document.getElementById(id);
+      if (container) container.innerHTML = '<div class="loading-card">Chưa có dự án nào</div>';
+    });
     return;
   }
   
-  container.innerHTML = userProjects.map(project => createProjectCard(project, true)).join('');
+  // Group projects by status
+  const groupedProjects = {
+    'Chờ xử lý': [],
+    'Đang thực hiện': [],
+    'Hoàn thành': []
+  };
+  
+  userProjects.forEach(project => {
+    const status = project[COL.P_STATUS] || 'Chờ xử lý';
+    if (groupedProjects[status]) {
+      groupedProjects[status].push(project);
+    }
+  });
+  
+  // Render each group
+  const containers = {
+    'Chờ xử lý': 'projects-pending',
+    'Đang thực hiện': 'projects-active', 
+    'Hoàn thành': 'projects-completed'
+  };
+  
+  Object.keys(containers).forEach(status => {
+    const container = document.getElementById(containers[status]);
+    if (!container) return;
+    
+    const projects = groupedProjects[status] || [];
+    if (projects.length === 0) {
+      container.innerHTML = '<div class="text-gray-500 text-center py-8">Không có dự án nào</div>';
+    } else {
+      container.innerHTML = projects.map(project => createProjectCard(project, true)).join('');
+    }
+  });
 }
 
 function createProjectCard(project, isDetailed = false) {
@@ -1480,7 +1514,7 @@ function createProjectCard(project, isDetailed = false) {
 }
 
 function renderTasks() {
-  const container = document.getElementById('tasks-grid');
+  const container = document.getElementById('tasks-by-project');
   if (!container) return;
   
   // Lọc các nhiệm vụ mà người dùng có quyền xem
@@ -1514,7 +1548,46 @@ function renderTasks() {
     return;
   }
   
-  container.innerHTML = userTasks.map(task => createTaskCard(task, true)).join('');
+  // Group tasks by project
+  const tasksByProject = {};
+  
+  userTasks.forEach(task => {
+    const projectId = task[COL.T_PID];
+    const project = allProjects.find(p => p[COL.P_ID] === projectId);
+    const projectName = project ? project[COL.P_NAME] : 'Dự án không xác định';
+    
+    if (!tasksByProject[projectName]) {
+      tasksByProject[projectName] = [];
+    }
+    tasksByProject[projectName].push(task);
+  });
+  
+  // Sort tasks within each project by status priority: Chờ xử lý -> Đang thực hiện -> Hoàn thành
+  const statusOrder = { 'Chờ xử lý': 1, 'Đang thực hiện': 2, 'Hoàn thành': 3 };
+  
+  Object.keys(tasksByProject).forEach(projectName => {
+    tasksByProject[projectName].sort((a, b) => {
+      const statusA = a[COL.T_STATUS] || 'Chờ xử lý';
+      const statusB = b[COL.T_STATUS] || 'Chờ xử lý';
+      return (statusOrder[statusA] || 1) - (statusOrder[statusB] || 1);
+    });
+  });
+  
+  // Render grouped tasks
+  let html = '';
+  Object.keys(tasksByProject).forEach(projectName => {
+    const tasks = tasksByProject[projectName];
+    html += `
+      <div class="mb-8">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">${projectName}</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          ${tasks.map(task => createTaskCard(task, true)).join('')}
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
 }
 
 function createTaskCard(task, isDetailed = false) {
