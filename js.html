@@ -1625,6 +1625,90 @@ function renderTasks() {
   }
 }
 
+function renderTasksList() {
+  const container = document.getElementById('tasks-by-project');
+  if (!container) return;
+  
+  // Lọc các nhiệm vụ mà người dùng có quyền xem
+  let userTasks = [];
+  
+  if (isAdmin()) {
+    userTasks = allTasks;
+  } else {
+    const userProjects = getUserAllowedProjects();
+    const userProjectIds = userProjects.map(p => p[COL.P_ID]);
+    
+    userTasks = allTasks.filter(task => {
+      // Nhiệm vụ được giao cho người dùng
+      if (task[COL.T_ASSIGNEE] === currentUser.name) {
+        return true;
+      }
+      
+      // Nhiệm vụ thuộc dự án mà người dùng quản lý
+      const projectId = task[COL.T_PID];
+      const project = allProjects.find(p => p[COL.P_ID] === projectId);
+      if (project && project[COL.P_MANAGER] === currentUser.name) {
+        return true;
+      }
+      
+      return false;
+    });
+  }
+  
+  if (!userTasks || userTasks.length === 0) {
+    container.innerHTML = '<div class="loading-card">Chưa có nhiệm vụ nào</div>';
+    return;
+  }
+  
+  // Group tasks by status
+  const tasksByStatus = {
+    'Chưa bắt đầu': [],
+    'Đang thực hiện': [],
+    'Hoàn thành': []
+  };
+  
+  userTasks.forEach(task => {
+    const status = task[COL.T_STATUS] || 'Chưa bắt đầu';
+    if (tasksByStatus[status]) {
+      tasksByStatus[status].push(task);
+    }
+  });
+  
+  // Sort tasks within each status group by project name for better organization
+  Object.keys(tasksByStatus).forEach(status => {
+    tasksByStatus[status].sort((a, b) => {
+      const projectA = allProjects.find(p => p[COL.P_ID] === a[COL.T_PID]);
+      const projectB = allProjects.find(p => p[COL.P_ID] === b[COL.T_PID]);
+      const nameA = projectA ? projectA[COL.P_NAME] : '';
+      const nameB = projectB ? projectB[COL.P_NAME] : '';
+      return nameA.localeCompare(nameB);
+    });
+  });
+  
+  // Render grouped tasks by status
+  let html = '';
+  Object.keys(tasksByStatus).forEach(status => {
+    const tasks = tasksByStatus[status];
+    html += `
+      <div class="mb-8">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">${status} (${tasks.length})</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          ${tasks.length > 0 
+            ? tasks.map(task => createTaskCard(task, true)).join('')
+            : '<div class="text-gray-500 text-center py-8 col-span-full border-2 border-dashed border-gray-200 rounded-lg">Chưa có nhiệm vụ nào</div>'
+          }
+        </div>
+      </div>
+    `;
+  });
+  
+  if (html === '') {
+    container.innerHTML = '<div class="loading-card">Chưa có nhiệm vụ nào</div>';
+  } else {
+    container.innerHTML = html;
+  }
+}
+
 function createTaskCard(task, isDetailed = false) {
     const taskId = task[COL.T_ID] || 'N/A';
     const taskName = task[COL.T_NAME] || 'Chưa có tên';
@@ -4326,7 +4410,7 @@ function calculateStats() {
 }
 
 // === KANBAN VIEW MANAGEMENT ===
-let currentTaskView = 'list'; // 'list' or 'kanban'
+let currentTaskView = 'kanban'; // Default to 'kanban' instead of 'list'
 let sortableInstances = []; // Store Sortable instances
 
 function toggleTaskView(view) {
@@ -4350,6 +4434,8 @@ function toggleTaskView(view) {
     listView.classList.remove('hidden-view');
     kanbanView.classList.add('hidden-view');
     destroySortableInstances();
+    // Force render list view with current data
+    renderTasksList();
   } else {
     listView.classList.add('hidden-view');
     kanbanView.classList.remove('hidden-view');
@@ -4451,17 +4537,17 @@ function createKanbanTaskCard(task) {
         </span>
       </div>
       
-      ${taskDesc ? `<p class="text-sm text-gray-600 mb-2">${taskDesc}</p>` : ''}
+      ${taskDesc ? `<p class="text-sm text-gray-600 mb-3">${taskDesc}</p>` : ''}
       
-      <div class="text-xs text-gray-500 mb-2">
+      <div class="text-xs text-gray-500 mb-3">
         <div class="flex items-center justify-between">
-          <span>📋 ${projectName}</span>
-          ${dueDate ? `<span>⏰ ${dueDate}</span>` : ''}
+          <span class="font-medium">${projectName}</span>
+          ${dueDate ? `<span>${dueDate}</span>` : ''}
         </div>
       </div>
       
       <div class="flex justify-between items-center">
-        <span class="text-xs text-gray-500">👤 ${assignee}</span>
+        <span class="text-xs text-gray-600">${assignee}</span>
         <div class="flex items-center">
           <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
             <div class="bg-blue-500 h-2 rounded-full" style="width: ${completion}%"></div>

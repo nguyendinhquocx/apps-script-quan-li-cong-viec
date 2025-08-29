@@ -2793,14 +2793,14 @@ main {
 }
 
 .view-toggle .btn.active {
-  background: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #d1d5db;
 }
 
 .view-toggle .btn:hover:not(.active) {
   background: #f9fafb;
-  border-color: #d1d5db;
+  border-color: #e5e7eb;
 }
 
 .kanban-board {
@@ -2809,24 +2809,45 @@ main {
   min-height: 500px;
   overflow-x: auto;
   padding-bottom: 1rem;
+  width: 100%;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .kanban-board {
+    gap: 1rem;
+    padding: 0 1rem 1rem 1rem;
+  }
+  
+  .kanban-column {
+    min-width: 260px;
+    padding: 1rem;
+  }
+  
+  .kanban-column h3 {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+  }
 }
 
 .kanban-column {
-  min-width: 320px;
-  max-width: 320px;
-  background: #f8fafc;
+  flex: 1;
+  min-width: 280px;
+  background: #ffffff;
   border-radius: 0.5rem;
-  padding: 1rem;
-  border: 1px solid #e5e7eb;
+  padding: 1.5rem;
+  /* Removed border and box-shadow for minimal design */
 }
 
 .kanban-column h3 {
   font-size: 1.125rem;
   font-weight: 600;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   color: #374151;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #f3f4f6;
+  text-align: center;
 }
 
 .kanban-cards {
@@ -2841,7 +2862,7 @@ main {
   border-radius: 0.5rem;
   padding: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
+  border: 1px solid #f3f4f6;
   cursor: grab;
   transition: all 0.2s;
 }
@@ -2849,6 +2870,7 @@ main {
 .kanban-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transform: translateY(-1px);
+  border-color: #e5e7eb;
 }
 
 .kanban-card:active {
@@ -2875,10 +2897,12 @@ main {
 .kanban-empty {
   text-align: center;
   color: #9ca3af;
-  padding: 2rem 1rem;
-  border: 2px dashed #d1d5db;
+  padding: 3rem 1rem;
+  border: 1px dashed #e5e7eb;
   border-radius: 0.5rem;
-  background: #f9fafb;
+  background: #fefefe;
+  font-size: 0.875rem;
+  margin: 0.5rem 0;
 }
 
 /* Hidden class for view toggle */
