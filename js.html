@@ -668,6 +668,15 @@ function setupEventListeners() {
             const btn = e.target.matches('.project-expand-btn') ? e.target : e.target.closest('.project-expand-btn');
             toggleProjectTasks(btn);
         }
+
+        // Hide Gantt search when clicking outside
+        const ganttSearchBtn = document.getElementById('gantt-search-btn');
+        const ganttSearchInput = document.getElementById('gantt-search');
+        if (ganttSearchBtn && ganttSearchInput && currentSection === 'gantt') {
+            if (!ganttSearchBtn.contains(e.target) && !ganttSearchInput.contains(e.target)) {
+                ganttSearchInput.classList.add('hidden');
+            }
+        }
     });
 
     // Thêm phần Gantt chart listeners
@@ -3395,26 +3404,32 @@ function setupGanttEventListeners() {
     document.getElementById('next-month').addEventListener('click', () => navigateGanttMonth(1));
   }
   
-  // Tìm kiếm - thêm xử lý cho icon button
+  // Tìm kiếm - thêm xử lý cho icon button với cleanup
   const searchBtn = document.getElementById('gantt-search-btn');
   const searchInput = document.getElementById('gantt-search');
   if (searchBtn && searchInput) {
-    searchBtn.addEventListener('click', () => {
+    console.log('Setting up search button listener'); // Debug log
+    // Cleanup old event listeners by replacing elements
+    const newSearchBtn = searchBtn.cloneNode(true);
+    searchBtn.parentNode.replaceChild(newSearchBtn, searchBtn);
+    
+    // Add new event listener
+    newSearchBtn.addEventListener('click', (e) => {
+      console.log('Search button clicked'); // Debug log
+      e.preventDefault();
+      e.stopPropagation();
       searchInput.classList.toggle('hidden');
+      console.log('Search input hidden class:', searchInput.classList.contains('hidden')); // Debug log
       if (!searchInput.classList.contains('hidden')) {
-        searchInput.focus();
+        setTimeout(() => searchInput.focus(), 100);
       }
     });
     
+    // Setup search input listener
     searchInput.removeEventListener('input', handleGanttSearch);
     searchInput.addEventListener('input', handleGanttSearch);
-    
-    // Ẩn ô tìm kiếm khi click ra ngoài
-    document.addEventListener('click', (e) => {
-      if (!searchBtn.contains(e.target) && !searchInput.contains(e.target)) {
-        searchInput.classList.add('hidden');
-      }
-    });
+  } else {
+    console.log('Search elements not found:', { searchBtn, searchInput }); // Debug log
   }
 }
 
