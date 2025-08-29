@@ -532,7 +532,12 @@
           <div id="gantt-container" class="mt-4 overflow-x-auto">
             <!-- Header - Ngày tháng -->
             <div id="gantt-header" class="flex border-b border-gray-200 pb-2">
-              <div class="w-64 min-w-[16rem] font-medium text-gray-700 pr-4">Tên</div>
+              <div class="w-64 min-w-[16rem] font-medium text-gray-700 pr-4 flex items-center justify-between">
+                <span>Tên</span>
+                <button id="toggle-all-projects" class="ml-2 p-1 rounded-md hover:bg-gray-100 transition-colors duration-200 text-gray-600 hover:text-gray-900" title="Xổ/thu gọn tất cả dự án">
+                  <i class="fas fa-chevron-down text-sm toggle-all-icon"></i>
+                </button>
+              </div>
               <div class="flex-1 gantt-days"></div>
             </div>
 

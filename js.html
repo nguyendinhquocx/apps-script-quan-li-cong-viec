@@ -692,7 +692,7 @@ function setupEventListeners() {
         }
 
         // THÊM: Xử lý click vào project card
-        if (e.target.closest('.clickable-project-card') && !e.target.closest('.action-btn')) {
+        if (e.target.closest('.clickable-project-card') && !e.target.closest('.action-btn') && !e.target.closest('.kanban-action-btn')) {
             const card = e.target.closest('.clickable-project-card');
             const projectId = card.dataset.id;
             
@@ -3978,6 +3978,13 @@ function setupGanttEventListeners() {
     document.getElementById('next-month').addEventListener('click', () => navigateGanttMonth(1));
   }
   
+  // Toggle All Projects Button
+  const toggleAllBtn = document.getElementById('toggle-all-projects');
+  if (toggleAllBtn) {
+    toggleAllBtn.replaceWith(toggleAllBtn.cloneNode(true));
+    document.getElementById('toggle-all-projects').addEventListener('click', toggleAllGanttProjects);
+  }
+  
   // Tìm kiếm - thêm xử lý cho icon button với cleanup
   const searchBtn = document.getElementById('gantt-search-btn');
   const searchInput = document.getElementById('gantt-search');
@@ -4010,6 +4017,53 @@ function setupGanttEventListeners() {
 // Thêm hàm mới này để xử lý sự kiện tìm kiếm
 function handleGanttSearch(e) {
   searchGantt(e.target.value);
+}
+
+function toggleAllGanttProjects() {
+  const toggleAllBtn = document.getElementById('toggle-all-projects');
+  const projectItems = document.querySelectorAll('.gantt-project-item');
+  const taskItems = document.querySelectorAll('.gantt-task-item');
+  
+  if (!toggleAllBtn || !projectItems.length) return;
+  
+  const isCurrentlyExpanded = !toggleAllBtn.classList.contains('collapsed');
+  
+  // Toggle button state and icon
+  if (isCurrentlyExpanded) {
+    // Collapse all
+    toggleAllBtn.classList.add('collapsed');
+    toggleAllBtn.title = 'Xổ tất cả dự án';
+    
+    // Hide all task items
+    taskItems.forEach(taskItem => {
+      taskItem.style.display = 'none';
+    });
+    
+    // Update individual project toggle buttons to collapsed state
+    projectItems.forEach(projectItem => {
+      const toggleBtn = projectItem.querySelector('.gantt-toggle');
+      if (toggleBtn) {
+        toggleBtn.classList.add('collapsed');
+      }
+    });
+  } else {
+    // Expand all
+    toggleAllBtn.classList.remove('collapsed');
+    toggleAllBtn.title = 'Thu gọn tất cả dự án';
+    
+    // Show all task items
+    taskItems.forEach(taskItem => {
+      taskItem.style.display = 'flex';
+    });
+    
+    // Update individual project toggle buttons to expanded state
+    projectItems.forEach(projectItem => {
+      const toggleBtn = projectItem.querySelector('.gantt-toggle');
+      if (toggleBtn) {
+        toggleBtn.classList.remove('collapsed');
+      }
+    });
+  }
 }
 
 function formatDateForGantt(dateInput) {

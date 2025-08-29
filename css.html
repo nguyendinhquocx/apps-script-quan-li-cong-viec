@@ -3099,6 +3099,39 @@ main {
   }
 }
 
+/* === GANTT TOGGLE ALL BUTTON === */
+#toggle-all-projects {
+  opacity: 0.7;
+  transform: scale(1);
+  transition: all 0.2s ease;
+}
+
+#toggle-all-projects:hover {
+  opacity: 1;
+  transform: scale(1.05);
+  background-color: #f3f4f6;
+}
+
+#toggle-all-projects .toggle-all-icon {
+  transition: transform 0.3s ease;
+}
+
+#toggle-all-projects.collapsed .toggle-all-icon {
+  transform: rotate(-90deg);
+}
+
+/* Make toggle all button more prominent than individual project toggles */
+#toggle-all-projects {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-weight: 500;
+}
+
+#toggle-all-projects:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 /* Hidden class for view toggle */
 .hidden-view {
   display: none !important;
